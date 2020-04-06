@@ -1,0 +1,19 @@
+{
+  "require": {
+    "rmccue/requests": ">=1.0",
+    "ext-dom": "*",
+    "ext-openssl": "*",
+    "ext-json": "*",
+    "ext-libxml": "*"
+  },
+  "autoload": {
+    "psr-0": {"Requests": "library/"},
+    "classmap": [
+      "library/"
+    ]
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^8",
+    "mikey179/vfsStream": "~1"
+  }
+}
