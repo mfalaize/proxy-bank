@@ -1,10 +1,10 @@
 <?php
 
 
-namespace ProxyBank;
+namespace ProxyBank\Services;
 
 
-class Crypto
+class CryptoService
 {
     const ENCRYPT_METHOD = "AES-256-CBC";
     const HASH_ALGO = "sha256";
@@ -44,11 +44,11 @@ class Crypto
         return openssl_decrypt($ciphertext, self::ENCRYPT_METHOD, $key, OPENSSL_RAW_DATA, $iv);
     }
 
-    protected function getSecretFilePath(): string {
+    public function getSecretFilePath(): string {
         return $this->rootDir . DIRECTORY_SEPARATOR . self::SECRET_FILE;
     }
 
-    protected function getSecretPassword(): string {
+    public function getSecretPassword(): string {
         if (!file_exists($this->getSecretFilePath())) {
             $this->generateSecretPasswordFile();
         }
@@ -58,7 +58,7 @@ class Crypto
         return $password;
     }
 
-    protected function generateRandomSecret(): string {
+    public function generateRandomSecret(): string {
         $possibles_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,;:!?./%*#{}[]()+=-_\\&@|$";
         $secret = "";
         for ($i = 0; $i < self::SECRET_KEY_LENGTH; $i++) {
@@ -67,7 +67,7 @@ class Crypto
         return $secret;
     }
 
-    protected function generateSecretPasswordFile(): void {
+    public function generateSecretPasswordFile(): void {
         $file = fopen($this->getSecretFilePath(), "w");
         fwrite($file, $this->generateRandomSecret());
         fclose($file);
