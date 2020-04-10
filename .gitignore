@@ -1,5 +1,6 @@
 .idea/
 vendor/
+public/tests/
 *.iml
 .phpunit.result.cache
 composer.lock
