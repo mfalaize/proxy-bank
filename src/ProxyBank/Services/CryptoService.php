@@ -4,19 +4,24 @@
 namespace ProxyBank\Services;
 
 
+use Psr\Log\LoggerInterface;
+
 class CryptoService
 {
     const ENCRYPT_METHOD = "AES-256-CBC";
     const HASH_ALGO = "sha256";
     const IV_LENGTH = 16;
-    const SECRET_FILE = "secret.txt";
+    const SECRET_FILE = "secret.php";
     const SECRET_KEY_LENGTH = 128;
 
-    private $rootDir;
+    private $srcDir;
 
-    public function __construct(string $rootDir)
+    private $logger;
+
+    public function __construct(string $srcDir, LoggerInterface $logger)
     {
-        $this->rootDir = $rootDir;
+        $this->srcDir = $srcDir;
+        $this->logger = $logger;
     }
 
     public function encrypt(string $plaintext): string {
@@ -45,21 +50,19 @@ class CryptoService
     }
 
     public function getSecretFilePath(): string {
-        return $this->rootDir . DIRECTORY_SEPARATOR . self::SECRET_FILE;
+        return $this->srcDir . DIRECTORY_SEPARATOR . self::SECRET_FILE;
     }
 
     public function getSecretPassword(): string {
         if (!file_exists($this->getSecretFilePath())) {
+            $this->logger->info("No " . self::SECRET_FILE . ' file detected. Generating one...');
             $this->generateSecretPasswordFile();
         }
-        $file = fopen($this->getSecretFilePath(), "r");
-        $password = fread($file, filesize($this->getSecretFilePath()));
-        fclose($file);
-        return $password;
+        return require $this->getSecretFilePath();
     }
 
     public function generateRandomSecret(): string {
-        $possibles_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,;:!?./%*#{}[]()+=-_\\&@|$";
+        $possibles_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,;:!?./%*#{}[]()+=-_&@|'";
         $secret = "";
         for ($i = 0; $i < self::SECRET_KEY_LENGTH; $i++) {
             $secret .= $possibles_chars[random_int(0, strlen($possibles_chars) - 1)];
@@ -68,8 +71,10 @@ class CryptoService
     }
 
     public function generateSecretPasswordFile(): void {
+        $secret = $this->generateRandomSecret();
+
         $file = fopen($this->getSecretFilePath(), "w");
-        fwrite($file, $this->generateRandomSecret());
+        fwrite($file, "<?php return \"$secret\";");
         fclose($file);
     }
 }
