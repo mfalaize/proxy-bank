@@ -1,4 +1,5 @@
 = proxy-bank
 
+image:https://img.shields.io/badge/php-%3E%3D%207.2-8892BF.svg[link="https://gitlab.com/mfalaize/proxy-bank/-/commits/master",title="pipeline status"]
 image:https://gitlab.com/mfalaize/proxy-bank/badges/master/pipeline.svg[link="https://gitlab.com/mfalaize/proxy-bank/-/commits/master",title="pipeline status"]
 image:https://gitlab.com/mfalaize/proxy-bank/badges/master/coverage.svg[link="https://gitlab.com/mfalaize/proxy-bank/-/commits/master",title="coverage report"]
