@@ -24,7 +24,8 @@ class CryptoService
         $this->logger = $logger;
     }
 
-    public function encrypt(string $plaintext): string {
+    public function encrypt(string $plaintext): string
+    {
         $password = $this->getSecretPassword();
         $key = hash(self::HASH_ALGO, $password, true);
         $iv = openssl_random_pseudo_bytes(self::IV_LENGTH);
@@ -35,7 +36,8 @@ class CryptoService
         return $iv . $hash . $ciphertext;
     }
 
-    public function decrypt(string $ivHashCiphertext): string {
+    public function decrypt(string $ivHashCiphertext): string
+    {
         $password = $this->getSecretPassword();
         $iv = substr($ivHashCiphertext, 0, self::IV_LENGTH);
         $hash = substr($ivHashCiphertext, self::IV_LENGTH, self::IV_LENGTH * 2);
@@ -49,11 +51,13 @@ class CryptoService
         return openssl_decrypt($ciphertext, self::ENCRYPT_METHOD, $key, OPENSSL_RAW_DATA, $iv);
     }
 
-    public function getSecretFilePath(): string {
+    public function getSecretFilePath(): string
+    {
         return $this->srcDir . DIRECTORY_SEPARATOR . self::SECRET_FILE;
     }
 
-    public function getSecretPassword(): string {
+    public function getSecretPassword(): string
+    {
         if (!file_exists($this->getSecretFilePath())) {
             $this->logger->info("No " . self::SECRET_FILE . ' file detected. Generating one...');
             $this->generateSecretPasswordFile();
@@ -61,7 +65,8 @@ class CryptoService
         return require $this->getSecretFilePath();
     }
 
-    public function generateRandomSecret(): string {
+    public function generateRandomSecret(): string
+    {
         $possibles_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,;:!?./%*#{}[]()+=-_&@|'";
         $secret = "";
         for ($i = 0; $i < self::SECRET_KEY_LENGTH; $i++) {
@@ -70,7 +75,8 @@ class CryptoService
         return $secret;
     }
 
-    public function generateSecretPasswordFile(): void {
+    public function generateSecretPasswordFile(): void
+    {
         $secret = $this->generateRandomSecret();
 
         $file = fopen($this->getSecretFilePath(), "w");
