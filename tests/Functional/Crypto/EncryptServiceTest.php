@@ -24,7 +24,7 @@ class EncryptServiceTest extends FunctionalTestCase
         $this->cryptoService = $this->createMock(CryptoService::class);
         $this->container->set(CryptoService::class, $this->cryptoService);
 
-        $this->request = $this->requestFactory->createRequest("POST", "/encrypt");
+        $this->request = $this->requestFactory->createServerRequest("POST", "/encrypt");
     }
 
     protected function tearDown(): void

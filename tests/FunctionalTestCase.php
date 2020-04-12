@@ -8,7 +8,7 @@ use DI\Container;
 use PHPUnit\Framework\TestCase;
 use Slim\App;
 use Slim\Factory\AppFactory;
-use Slim\Psr7\Factory\RequestFactory;
+use Slim\Psr7\Factory\ServerRequestFactory;
 
 class FunctionalTestCase extends TestCase
 {
@@ -18,7 +18,7 @@ class FunctionalTestCase extends TestCase
     protected $app;
 
     /**
-     * @var RequestFactory
+     * @var ServerRequestFactory
      */
     protected $requestFactory;
 
@@ -37,7 +37,7 @@ class FunctionalTestCase extends TestCase
 
         require __DIR__ . "/../src/routes.php";
 
-        $this->requestFactory = new RequestFactory();
+        $this->requestFactory = new ServerRequestFactory();
         $this->container = $this->app->getContainer();
     }
 
