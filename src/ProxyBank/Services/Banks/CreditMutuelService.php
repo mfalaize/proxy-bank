@@ -4,6 +4,8 @@
 namespace ProxyBank\Services\Banks;
 
 
+use ProxyBank\Models\Bank;
+use ProxyBank\Models\Security\AuthenticationStrategy;
 use ProxyBank\Services\BankServiceInterface;
 use Psr\Container\ContainerInterface;
 
@@ -14,9 +16,13 @@ class CreditMutuelService implements BankServiceInterface
     {
     }
 
-    public function getBankName(): string
+    public function getBank(): Bank
     {
-        return "Crédit Mutuel";
+        $bank = new Bank();
+        $bank->id = "credit-mutuel";
+        $bank->name = "Crédit Mutuel";
+        $bank->authenticationStrategy = AuthenticationStrategy::LOGIN_PASSWORD_COOKIE;
+        return $bank;
     }
 
     public function fetchTransactions(string $accountId): array

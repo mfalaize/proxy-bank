@@ -4,9 +4,11 @@
 namespace ProxyBank\Services;
 
 
+use ProxyBank\Models\Bank;
+
 interface BankServiceInterface
 {
-    public function getBankName(): string;
+    public function getBank(): Bank;
 
     public function fetchTransactions(string $accountId): array;
 }

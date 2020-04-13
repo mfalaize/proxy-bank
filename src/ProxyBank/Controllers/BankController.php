@@ -18,7 +18,7 @@ class BankController
 
     public function listBanks(Request $request, Response $response)
     {
-        $list = $this->bankService->listAvailableBankNames();
+        $list = $this->bankService->listAvailableBanks();
         $response->getBody()->write(json_encode($list));
         return $response->withHeader("Content-Type", "application/json");
     }

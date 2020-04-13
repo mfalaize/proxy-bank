@@ -39,12 +39,16 @@ class BankService
         }, $bankImplementationsClasses);
     }
 
-    public function listAvailableBankNames(): array
+    public function listAvailableBanks(): array
     {
-        $bankNames = array_map(function($bankImplementation) {
-            return $bankImplementation->getBankName();
+        $banks = array_map(function ($bankImplementation) {
+            return $bankImplementation->getBank();
         }, $this->bankImplementations);
-        sort($bankNames);
-        return $bankNames;
+
+        usort($banks, function ($a, $b) {
+            return strcmp($a->name, $b->name);
+        });
+
+        return $banks;
     }
 }
