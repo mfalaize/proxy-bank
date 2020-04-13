@@ -30,6 +30,7 @@ class BankServiceTest extends FunctionalTestCase
 
         $response = $this->app->handle($this->requestFactory->createServerRequest("GET", "/listBanks"));
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals("[\"Cr\u00e9dit Agricole\",\"Cr\u00e9dit Mutuel\"]", $response->getBody()->getContents());
+        $this->assertEquals("application/json", $response->getHeaderLine("Content-Type"));
+        $this->assertEquals("[\"Cr\u00e9dit Agricole\",\"Cr\u00e9dit Mutuel\"]", $response->getBody());
     }
 }

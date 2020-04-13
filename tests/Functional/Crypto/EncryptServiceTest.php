@@ -75,6 +75,6 @@ class EncryptServiceTest extends FunctionalTestCase
         ]));
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertEquals("ZW5jcnlwdGVkRGF0YQ==", $response->getBody()->getContents());
+        $this->assertEquals("ZW5jcnlwdGVkRGF0YQ==", $response->getBody());
     }
 }
