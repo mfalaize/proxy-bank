@@ -18,6 +18,19 @@ before_script:
   # Install all project dependencies
   - php composer.phar install
 
+stages:
+  - test
+  - deploy
+
 test:
+  stage: test
   script:
     - vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --coverage-text
+
+deploy:
+  stage: deploy
+  script:
+    - apt-get install lftp -yqq
+    - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rv ./ ./ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/"
+  only:
+    - master
