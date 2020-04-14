@@ -4,7 +4,7 @@
 namespace ProxyBank\Services;
 
 
-use ProxyBank\Models\Token;
+use ProxyBank\Models\TokenResult;
 use Psr\Container\ContainerInterface;
 use ReflectionClass;
 
@@ -62,14 +62,14 @@ class BankService
         return $banks;
     }
 
-    public function getAuthTokenWithBankId(string $bankId, array $inputs): Token
+    public function getAuthTokenWithBankId(string $bankId, array $inputs): TokenResult
     {
         $bankImplementation = array_filter($this->bankImplementations, function ($bankImplementation) use (&$bankId) {
             return $bankImplementation->getBank()->id == $bankId;
         });
 
         if (sizeof($bankImplementation) == 0) {
-            $token = new Token();
+            $token = new TokenResult();
             $token->message = "Unknown $bankId bankId";
             return $token;
         }
@@ -77,7 +77,7 @@ class BankService
         return array_values($bankImplementation)[0]->getAuthToken($inputs);
     }
 
-    public function getAuthTokenWithToken(string $token): Token
+    public function getAuthTokenWithToken(string $token): TokenResult
     {
         $inputs = json_decode($this->cryptoService->decrypt($token), true);
         return $this->getAuthTokenWithBankId($inputs["bankId"], $inputs);

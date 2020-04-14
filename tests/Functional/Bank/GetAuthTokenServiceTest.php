@@ -4,7 +4,7 @@
 namespace Tests\Functional\Bank;
 
 
-use ProxyBank\Models\Token;
+use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankService;
 use Tests\FunctionalTestCase;
 
@@ -44,7 +44,7 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
             ->method("getAuthTokenWithBankId")
             ->with("credit-mutuel", ["bankId" => "credit-mutuel", "test" => "ok"])
             ->willReturnCallback(function () {
-                $token = new Token();
+                $token = new TokenResult();
                 $token->message = "A message";
                 return $token;
             });
@@ -69,7 +69,7 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
             ->method("getAuthTokenWithToken")
             ->with("encryptedToken")
             ->willReturnCallback(function () {
-                $token = new Token();
+                $token = new TokenResult();
                 $token->token = "anotherEncryptedToken";
                 $token->completedToken = true;
                 $token->message = "OK";

@@ -6,7 +6,7 @@ namespace ProxyBank\Services\Banks;
 
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
-use ProxyBank\Models\Token;
+use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankServiceInterface;
 use Psr\Container\ContainerInterface;
 
@@ -29,10 +29,10 @@ class CreditMutuelService implements BankServiceInterface
         return $bank;
     }
 
-    public function getAuthToken(array $inputs): Token
+    public function getAuthToken(array $inputs): TokenResult
     {
         // TODO
-        $token = new Token();
+        $token = new TokenResult();
         $token->message = "Not implemented yet";
         return $token;
     }

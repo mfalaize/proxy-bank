@@ -6,7 +6,7 @@ namespace ProxyBank\Models;
 
 use JsonSerializable;
 
-class Token implements JsonSerializable
+class TokenResult implements JsonSerializable
 {
     /**
      * The token is an encrypted json

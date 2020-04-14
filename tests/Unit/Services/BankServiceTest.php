@@ -6,7 +6,7 @@ namespace Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Models\Bank;
-use ProxyBank\Models\Token;
+use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankService;
 use ProxyBank\Services\BankServiceInterface;
 use ProxyBank\Services\CryptoService;
@@ -101,7 +101,7 @@ class BankServiceTest extends TestCase
             ->method("getAuthToken")
             ->with(["test" => "ok"])
             ->willReturnCallback(function ($inputs) {
-                $token = new Token();
+                $token = new TokenResult();
                 $token->message = "A message";
                 return $token;
             });
@@ -131,7 +131,7 @@ class BankServiceTest extends TestCase
             ->method("getAuthTokenWithBankId")
             ->with("credit-mutuel", ["bankId" => "credit-mutuel", "test" => "ok"])
             ->willReturnCallback(function ($bankId, $inputs) {
-                $token = new Token();
+                $token = new TokenResult();
                 $token->message = "A message";
                 return $token;
             });
