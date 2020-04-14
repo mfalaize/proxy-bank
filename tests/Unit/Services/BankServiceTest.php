@@ -6,7 +6,6 @@ namespace Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Models\Bank;
-use ProxyBank\Models\Security\AuthenticationStrategy;
 use ProxyBank\Services\BankService;
 use ProxyBank\Services\BankServiceInterface;
 use Psr\Container\ContainerInterface;
@@ -42,12 +41,10 @@ class BankServiceTest extends TestCase
         $creditMutuel = new Bank();
         $creditMutuel->id = "1";
         $creditMutuel->name = "Crédit Mutuel";
-        $creditMutuel->authenticationStrategy = AuthenticationStrategy::LOGIN_PASSWORD_COOKIE;
 
         $creditAgricole = new Bank();
         $creditAgricole->id = "2";
         $creditAgricole->name = "Crédit Agricole";
-        $creditAgricole->authenticationStrategy = AuthenticationStrategy::LOGIN_PASSWORD_COOKIE;
 
         $banks = [$creditMutuel, $creditAgricole];
 
@@ -64,10 +61,8 @@ class BankServiceTest extends TestCase
 
         $this->assertEquals("2", $availableBanks[0]->id);
         $this->assertEquals("Crédit Agricole", $availableBanks[0]->name);
-        $this->assertEquals(AuthenticationStrategy::LOGIN_PASSWORD_COOKIE, $availableBanks[0]->authenticationStrategy);
 
         $this->assertEquals("1", $availableBanks[1]->id);
         $this->assertEquals("Crédit Mutuel", $availableBanks[1]->name);
-        $this->assertEquals(AuthenticationStrategy::LOGIN_PASSWORD_COOKIE, $availableBanks[1]->authenticationStrategy);
     }
 }

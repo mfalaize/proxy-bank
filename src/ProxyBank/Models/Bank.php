@@ -4,9 +4,9 @@
 namespace ProxyBank\Models;
 
 
-use ProxyBank\Models\Security\AuthenticationStrategy;
+use JsonSerializable;
 
-class Bank implements \JsonSerializable
+class Bank implements JsonSerializable
 {
     /**
      * @var string a unique id for the bank which will not be modified
@@ -19,15 +19,16 @@ class Bank implements \JsonSerializable
     public $name;
 
     /**
-     * @var int (values from {@link AuthenticationStrategy})
+     * @var array Inputs for authentication
      */
-    public $authenticationStrategy;
+    public $authInputs;
 
     public function jsonSerialize()
     {
         return [
             "id" => $this->id,
-            "name" => $this->name
+            "name" => $this->name,
+            "authInputs" => $this->authInputs
         ];
     }
 }

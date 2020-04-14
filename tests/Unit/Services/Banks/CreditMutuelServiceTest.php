@@ -5,6 +5,7 @@ namespace Tests\Unit\Services\Banks;
 
 
 use PHPUnit\Framework\TestCase;
+use ProxyBank\Models\Input;
 use ProxyBank\Models\Security\AuthenticationStrategy;
 use ProxyBank\Services\Banks\CreditMutuelService;
 use Psr\Container\ContainerInterface;
@@ -28,6 +29,10 @@ class CreditMutuelServiceTest extends TestCase
         $bank = $this->service->getBank();
         $this->assertEquals("credit-mutuel", $bank->id); // Should NEVER change
         $this->assertEquals("Crédit Mutuel", $bank->name);
-        $this->assertEquals(AuthenticationStrategy::LOGIN_PASSWORD_COOKIE, $bank->authenticationStrategy);
+        $this->assertEquals("Login", $bank->authInputs[0]->name);
+        $this->assertEquals(Input::TYPE_TEXT, $bank->authInputs[0]->type);
+        $this->assertEquals("Password", $bank->authInputs[1]->name);
+        $this->assertEquals(Input::TYPE_PASSWORD, $bank->authInputs[1]->type);
+        $this->assertEquals(2, sizeof($bank->authInputs));
     }
 }
