@@ -7,13 +7,13 @@ namespace ProxyBank\Services\Banks;
 use DOMDocument;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Psr7\Response;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankServiceInterface;
 use ProxyBank\Services\CryptoService;
 use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ResponseInterface;
 
 class CreditMutuelService implements BankServiceInterface
 {
@@ -26,6 +26,7 @@ class CreditMutuelService implements BankServiceInterface
     const BASE_URL = 'https://' . self::DOMAIN;
     const AUTH_URL = '/fr/authentification.html';
     const VALIDATION_URL = '/fr/banque/validation.aspx';
+    const OTP_TRANSACTION_STATE_URL = "/fr/banque/async/otp/SOSD_OTP_GetTransactionState.htm";
 
     public $handlerStack;
 
@@ -63,24 +64,54 @@ class CreditMutuelService implements BankServiceInterface
             return $token;
         }
 
+        if (isset($inputs[self::TRANSACTION_ID_INPUT])) {
+            return $this->processTransactionState($inputs[self::TRANSACTION_ID_INPUT]);
+        }
+
+        return $this->processAuthentication($inputs[self::LOGIN_INPUT], $inputs[self::PASSWORD_INPUT]);
+    }
+
+    private function processAuthentication(string $login, string $password): TokenResult
+    {
         $client = $this->buildClientHttp();
 
         $response = $client->post(self::AUTH_URL, [
             "form_params" => ([
-                "_cm_user" => $inputs[self::LOGIN_INPUT],
-                "_cm_pwd" => $inputs[self::PASSWORD_INPUT],
+                "_cm_user" => $login,
+                "_cm_pwd" => $password,
                 "flag" => "password"
             ])
         ]);
 
         if ($response->getStatusCode() == 302) {
-            return $this->processLoginSuccess($client, $inputs);
+            return $this->processLoginSuccess($client, $login, $password);
         } else {
             return $this->processLoginFailed($response);
         }
     }
 
-    private function processLoginSuccess(Client $client, array $inputs): TokenResult
+    private function processTransactionState(string $transactionId): TokenResult
+    {
+        $client = $this->buildClientHttp();
+
+        $response = $client->post(self::OTP_TRANSACTION_STATE_URL, [
+            "form_params" => ([
+                "transactionId" => $transactionId
+            ])
+        ]);
+
+        $xml = new DOMDocument();
+        $xml->loadXML($response->getBody());
+        $status = $xml->getElementsByTagName("transactionState")->item(0)->textContent;
+
+        $token = new TokenResult();
+        if ($status == "PENDING") {
+            $token->message = "En attente de votre validation...";
+        }
+        return $token;
+    }
+
+    private function processLoginSuccess(Client $client, string $login, string $password): TokenResult
     {
         $response = $client->get(self::VALIDATION_URL);
         $htmlString = (string)$response->getBody();
@@ -97,8 +128,8 @@ class CreditMutuelService implements BankServiceInterface
 
         $tokenJson = json_encode([
             "bankId" => $this->getBank()->id,
-            self::LOGIN_INPUT => $inputs[self::LOGIN_INPUT],
-            self::PASSWORD_INPUT => $inputs[self::PASSWORD_INPUT],
+            self::LOGIN_INPUT => $login,
+            self::PASSWORD_INPUT => $password,
             self::TRANSACTION_ID_INPUT => $transactionId
         ]);
 
@@ -109,7 +140,7 @@ class CreditMutuelService implements BankServiceInterface
         return $token;
     }
 
-    private function processLoginFailed(Response $response): TokenResult
+    private function processLoginFailed(ResponseInterface $response): TokenResult
     {
         $html = new DOMDocument();
         $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);

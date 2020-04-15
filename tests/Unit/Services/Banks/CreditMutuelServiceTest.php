@@ -41,6 +41,19 @@ class CreditMutuelServiceTest extends TestCase
         $this->service->handlerStack->push(Middleware::history($this->transactionsHistory));
     }
 
+    private function scenario_token_with_transactionId_and_transaction_pending(): TokenResult
+    {
+        $this->mockResponses->append(
+            new Response(200, [], "<root><code_retour>0000</code_retour><transactionState>PENDING</transactionState></root>")
+        );
+
+        return $this->service->getAuthToken([
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "transactionId" => "aTransactionId"
+        ]);
+    }
+
     private function scenario_login_failed(): TokenResult
     {
         $this->mockResponses->append(
@@ -184,5 +197,31 @@ var otpInMobileAppParameters = {
         $this->assertNull($token->token);
         $this->assertNull($token->completedToken);
         $this->assertEquals("Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie", $token->message);
+    }
+
+    /**
+     * @test
+     */
+    public function getAuthToken_should_request_otp_transaction_url_to_know_transaction_status()
+    {
+        $this->scenario_token_with_transactionId_and_transaction_pending();
+
+        $request1 = $this->transactionsHistory[0]["request"];
+        $this->assertEquals("POST", $request1->getMethod());
+        $this->assertEquals("https://www.creditmutuel.fr/fr/banque/async/otp/SOSD_OTP_GetTransactionState.htm", (string)$request1->getUri());
+        $this->assertEquals("application/x-www-form-urlencoded", $request1->getHeaderLine("Content-Type"));
+        $this->assertEquals("transactionId=aTransactionId", (string)$request1->getBody());
+    }
+
+    /**
+     * @test
+     */
+    public function getAuthToken_should_return_message_if_transaction_is_pending()
+    {
+        $token = $this->scenario_token_with_transactionId_and_transaction_pending();
+
+        $this->assertNull($token->token);
+        $this->assertNull($token->completedToken);
+        $this->assertEquals("En attente de votre validation...", $token->message);
     }
 }
