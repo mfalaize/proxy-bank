@@ -41,6 +41,26 @@ class CreditMutuelServiceTest extends TestCase
         $this->service->handlerStack->push(Middleware::history($this->transactionsHistory));
     }
 
+    private function scenario_login_failed(): TokenResult
+    {
+        $this->mockResponses->append(
+            new Response(200, [], "
+<html>
+<head><meta charset=\"UTF-8\"/></head>
+<body>
+<div id=\"ident\">
+<div class=\"blocmsg err\"><p>Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie</p></div>
+</body>
+</html>
+            ") // login failed
+        );
+
+        return $this->service->getAuthToken([
+            "Login" => "myLogin",
+            "Password" => "myPassword"
+        ]);
+    }
+
     private function scenario_login_success_without_dsp2_cookie(): TokenResult
     {
         $this->mockResponses->append(
@@ -152,5 +172,17 @@ var otpInMobileAppParameters = {
         $this->assertEquals("encryptedToken", $token->token);
         $this->assertFalse($token->completedToken);
         $this->assertEquals("Votre connexion nécessite une sécurisation. Démarrez votre application mobile Crédit Mutuel depuis votre appareil \"MOTO G (5S) DE M MAXIME FALAIZE\" pour vérifier et confirmer votre identité.", $token->message);
+    }
+
+    /**
+     * @test
+     */
+    public function getAuthToken_should_return_error_message_if_login_failed()
+    {
+        $token = $this->scenario_login_failed();
+
+        $this->assertNull($token->token);
+        $this->assertNull($token->completedToken);
+        $this->assertEquals("Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie", $token->message);
     }
 }

@@ -7,6 +7,7 @@ namespace ProxyBank\Services\Banks;
 use DOMDocument;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
@@ -50,21 +51,21 @@ class CreditMutuelService implements BankServiceInterface
 
     public function getAuthToken(array $inputs): TokenResult
     {
-        $token = new TokenResult();
-
         if (!isset($inputs[self::LOGIN_INPUT])) {
+            $token = new TokenResult();
             $token->message = self::LOGIN_INPUT . " value is required";
             return $token;
         }
 
         if (!isset($inputs[self::PASSWORD_INPUT])) {
+            $token = new TokenResult();
             $token->message = self::PASSWORD_INPUT . " value is required";
             return $token;
         }
 
         $client = $this->buildClientHttp();
 
-        $client->post(self::AUTH_URL, [
+        $response = $client->post(self::AUTH_URL, [
             "form_params" => ([
                 "_cm_user" => $inputs[self::LOGIN_INPUT],
                 "_cm_pwd" => $inputs[self::PASSWORD_INPUT],
@@ -72,6 +73,15 @@ class CreditMutuelService implements BankServiceInterface
             ])
         ]);
 
+        if ($response->getStatusCode() == 302) {
+            return $this->processLoginSuccess($client, $inputs);
+        } else {
+            return $this->processLoginFailed($response);
+        }
+    }
+
+    private function processLoginSuccess(Client $client, array $inputs): TokenResult
+    {
         $response = $client->get(self::VALIDATION_URL);
         $htmlString = (string)$response->getBody();
 
@@ -92,13 +102,33 @@ class CreditMutuelService implements BankServiceInterface
             self::TRANSACTION_ID_INPUT => $transactionId
         ]);
 
+        $token = new TokenResult();
         $token->token = $this->cryptoService->encrypt($tokenJson);
         $token->completedToken = false;
         $token->message = $message;
         return $token;
     }
 
-    public function buildClientHttp()
+    private function processLoginFailed(Response $response): TokenResult
+    {
+        $html = new DOMDocument();
+        $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
+        $identDivs = $html->getElementById("ident")->getElementsByTagName("div");
+        $errorMessage = null;
+        foreach ($identDivs as $identDiv) {
+            $cssClasses = preg_split("/ /", $identDiv->getAttribute("class"));
+            if (in_array("err", $cssClasses)) {
+                $errorMessage = $identDiv->textContent;
+                break;
+            }
+        }
+
+        $token = new TokenResult();
+        $token->message = $errorMessage;
+        return $token;
+    }
+
+    private function buildClientHttp()
     {
         return new Client([
             "base_uri" => self::BASE_URL,
