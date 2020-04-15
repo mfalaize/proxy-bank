@@ -33,11 +33,12 @@ class CryptoService
         $ciphertext = openssl_encrypt($plaintext, self::ENCRYPT_METHOD, $key, OPENSSL_RAW_DATA, $iv);
         $hash = hash_hmac(self::HASH_ALGO, $ciphertext . $iv, $key, true);
 
-        return $iv . $hash . $ciphertext;
+        return base64_encode($iv . $hash . $ciphertext);
     }
 
-    public function decrypt(string $ivHashCiphertext): string
+    public function decrypt(string $base64Encoded): string
     {
+        $ivHashCiphertext = base64_decode($base64Encoded);
         $password = $this->getSecretPassword();
         $iv = substr($ivHashCiphertext, 0, self::IV_LENGTH);
         $hash = substr($ivHashCiphertext, self::IV_LENGTH, self::IV_LENGTH * 2);

@@ -162,4 +162,19 @@ class CryptoServiceTest extends TestCase
 
         $this->assertEquals("", $this->service->decrypt($encrypted));
     }
+
+    /**
+     * @test
+     */
+    public function encrypt_should_return_base64_encoded_data()
+    {
+        vfsStream::newFile(CryptoService::SECRET_FILE)
+            ->withContent("<?php return \"123456abcdef\";")
+            ->at($this->root);
+
+        $text = "encrypt test sample";
+        $encrypted = $this->service->encrypt($text);
+
+        $this->assertNotFalse(base64_decode($encrypted, true));
+    }
 }
