@@ -7,6 +7,7 @@ namespace ProxyBank\Services\Banks;
 use DOMDocument;
 use DOMXPath;
 use GuzzleHttp\Client;
+use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\HandlerStack;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
@@ -24,6 +25,7 @@ class CreditMutuelService implements BankServiceInterface
     const TRANSACTION_ID_INPUT = "transactionId";
     const VALIDATION_URL_INPUT = "validationUrl";
     const OTP_HIDDEN_INPUT = "otp_hidden";
+    const COOKIES_INPUT = "cookies";
     const DSP2_TOKEN_INPUT = "auth_client_state";
 
     const DOMAIN = "www.creditmutuel.fr";
@@ -74,7 +76,9 @@ class CreditMutuelService implements BankServiceInterface
                 $inputs[self::PASSWORD_INPUT],
                 $inputs[self::TRANSACTION_ID_INPUT],
                 $inputs[self::VALIDATION_URL_INPUT],
-                $inputs[self::OTP_HIDDEN_INPUT]);
+                $inputs[self::OTP_HIDDEN_INPUT],
+                $inputs[self::COOKIES_INPUT]
+            );
         }
 
         return $this->processAuthentication($inputs[self::LOGIN_INPUT], $inputs[self::PASSWORD_INPUT]);
@@ -101,9 +105,12 @@ class CreditMutuelService implements BankServiceInterface
 
     private function processTransactionState(string $login, string $password,
                                              string $transactionId, string $validationUrl,
-                                             string $otpToken): TokenResult
+                                             string $otpToken, array $cookies): TokenResult
     {
         $client = $this->buildClientHttp();
+        foreach ($cookies as $cookie) {
+            $client->getConfig("cookies")->setCookie(new SetCookie($cookie));
+        }
 
         $response = $client->post(self::OTP_TRANSACTION_STATE_URL, [
             "form_params" => ([
@@ -122,7 +129,9 @@ class CreditMutuelService implements BankServiceInterface
             // This call to the validation URL fill out the client cookie jar with the valid dsp2 token
             $client->post($validationUrl, [
                 "form_params" => ([
-                    "otp_hidden" => $otpToken
+                    "otp_hidden" => $otpToken,
+                    "_FID_DoValidate.x" => 0,
+                    "_FID_DoValidate.y" => 0
                 ])
             ]);
 
@@ -159,6 +168,8 @@ class CreditMutuelService implements BankServiceInterface
         $xpath = new DOMXPath($html);
         $otpHidden = $xpath->query("//input[@name='otp_hidden']")->item(0)->getAttribute("value");
 
+        $cookies = $client->getConfig("cookies")->toArray();
+
         $message = $html->getElementById("inMobileAppMessage")->textContent;
         $message = trim($message);
         $message = str_replace("  ", "", $message);
@@ -169,7 +180,8 @@ class CreditMutuelService implements BankServiceInterface
             self::PASSWORD_INPUT => $password,
             self::TRANSACTION_ID_INPUT => $transactionId,
             self::VALIDATION_URL_INPUT => $validationUrl,
-            self::OTP_HIDDEN_INPUT => $otpHidden
+            self::OTP_HIDDEN_INPUT => $otpHidden,
+            self::COOKIES_INPUT => $cookies
         ]);
 
         $token = new TokenResult();

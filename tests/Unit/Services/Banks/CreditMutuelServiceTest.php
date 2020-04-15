@@ -63,8 +63,21 @@ class CreditMutuelServiceTest extends TestCase
             "Login" => "myLogin",
             "Password" => "myPassword",
             "transactionId" => "aTransactionId",
-            "validationUrl" => "https://avalidationurl",
-            "otp_hidden" => "anOTPHiddenToken"
+            "validationUrl" => "https://www.creditmutuel.fr/avalidationurl",
+            "otp_hidden" => "anOTPHiddenToken",
+            "cookies" => [
+                [
+                    "Name" => "IdSes",
+                    "Value" => "sessionId",
+                    "Domain" => "www.creditmutuel.fr",
+                    "Path" => "/",
+                    "Max-Age" => null,
+                    "Expires" => null,
+                    "Secure" => true,
+                    "Discard" => false,
+                    "HttpOnly" => false
+                ]
+            ]
         ]);
     }
 
@@ -78,8 +91,21 @@ class CreditMutuelServiceTest extends TestCase
             "Login" => "myLogin",
             "Password" => "myPassword",
             "transactionId" => "aTransactionId",
-            "validationUrl" => "https://avalidationurl",
-            "otp_hidden" => "anOTPHiddenToken"
+            "validationUrl" => "https://www.creditmutuel.fr/avalidationurl",
+            "otp_hidden" => "anOTPHiddenToken",
+            "cookies" => [
+                [
+                    "Name" => "IdSes",
+                    "Value" => "sessionId",
+                    "Domain" => "www.creditmutuel.fr",
+                    "Path" => "/",
+                    "Max-Age" => null,
+                    "Expires" => null,
+                    "Secure" => true,
+                    "Discard" => false,
+                    "HttpOnly" => false
+                ]
+            ]
         ]);
     }
 
@@ -132,7 +158,20 @@ var otpInMobileAppParameters = {
                 "Password" => "myPassword",
                 "transactionId" => "aTransactionId",
                 "validationUrl" => "/fr/banque/validation.aspx?_tabi=C&_pid=OtpValidationPage&k___ValidateAntiForgeryToken=aCsrfToken",
-                "otp_hidden" => "anOtpHiddenToken"
+                "otp_hidden" => "anOtpHiddenToken",
+                "cookies" => [
+                    [
+                        "Name" => "IdSes",
+                        "Value" => "token",
+                        "Domain" => "www.creditmutuel.fr",
+                        "Path" => "/",
+                        "Max-Age" => null,
+                        "Expires" => null,
+                        "Secure" => true,
+                        "Discard" => false,
+                        "HttpOnly" => false
+                    ]
+                ]
             ]))
             ->willReturn("encryptedToken");
 
@@ -244,6 +283,7 @@ var otpInMobileAppParameters = {
         $this->assertEquals("https://www.creditmutuel.fr/fr/banque/async/otp/SOSD_OTP_GetTransactionState.htm", (string)$request1->getUri());
         $this->assertEquals("application/x-www-form-urlencoded", $request1->getHeaderLine("Content-Type"));
         $this->assertEquals("transactionId=aTransactionId", (string)$request1->getBody());
+        $this->assertEquals("IdSes=sessionId", $request1->getHeaderLine("Cookie"));
     }
 
     /**
@@ -267,9 +307,10 @@ var otpInMobileAppParameters = {
 
         $request2 = $this->transactionsHistory[1]["request"];
         $this->assertEquals("POST", $request2->getMethod());
-        $this->assertEquals("https://avalidationurl", (string)$request2->getUri());
+        $this->assertEquals("https://www.creditmutuel.fr/avalidationurl", (string)$request2->getUri());
         $this->assertEquals("application/x-www-form-urlencoded", $request2->getHeaderLine("Content-Type"));
-        $this->assertEquals("otp_hidden=anOTPHiddenToken", (string)$request2->getBody());
+        $this->assertEquals("otp_hidden=anOTPHiddenToken&_FID_DoValidate.x=0&_FID_DoValidate.y=0", (string)$request2->getBody());
+        $this->assertEquals("IdSes=sessionId", $request2->getHeaderLine("Cookie"));
     }
 
     /**
