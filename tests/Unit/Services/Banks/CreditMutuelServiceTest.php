@@ -61,7 +61,7 @@ class CreditMutuelServiceTest extends TestCase
         ]);
     }
 
-    private function scenario_login_success_without_dsp2_cookie(): TokenResult
+    private function scenario_login_success(): TokenResult
     {
         $this->mockResponses->append(
             new Response(302, ["Set-Cookie" => "IdSes=token; Path=/; Secure"]), // login success
@@ -140,7 +140,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_post_login_password_to_auth_url()
     {
-        $this->scenario_login_success_without_dsp2_cookie();
+        $this->scenario_login_success();
 
         $request1 = $this->transactionsHistory[0]["request"];
         $this->assertEquals("POST", $request1->getMethod());
@@ -154,7 +154,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_request_validation_page_after_login_success_and_no_dsp2_cookie()
     {
-        $this->scenario_login_success_without_dsp2_cookie();
+        $this->scenario_login_success();
 
         $request2 = $this->transactionsHistory[1]["request"];
         $this->assertEquals("GET", $request2->getMethod());
@@ -167,7 +167,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_return_encrypted_token_with_transactionId_from_validation_page_when_no_dsp2_cookie()
     {
-        $token = $this->scenario_login_success_without_dsp2_cookie();
+        $token = $this->scenario_login_success();
 
         $this->assertEquals("encryptedToken", $token->token);
         $this->assertFalse($token->completedToken);
