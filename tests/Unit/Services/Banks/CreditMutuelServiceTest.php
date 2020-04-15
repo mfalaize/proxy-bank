@@ -41,6 +41,33 @@ class CreditMutuelServiceTest extends TestCase
         $this->service->handlerStack->push(Middleware::history($this->transactionsHistory));
     }
 
+    private function scenario_token_with_transactionId_and_transaction_validated(): TokenResult
+    {
+        $this->mockResponses->append(
+            new Response(200, [],
+                "<root><code_retour>0000</code_retour><transactionState>VALIDATED</transactionState></root>"),
+            new Response(302, ["Set-Cookie" => "auth_client_state=anAuthClientStateToken"])
+        );
+
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("encrypt")
+            ->with(json_encode([
+                "bankId" => "credit-mutuel",
+                "Login" => "myLogin",
+                "Password" => "myPassword",
+                "auth_client_state" => "anAuthClientStateToken"
+            ]))
+            ->willReturn("aCompleteEncryptedToken");
+
+        return $this->service->getAuthToken([
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "transactionId" => "aTransactionId",
+            "validationUrl" => "https://avalidationurl",
+            "otp_hidden" => "anOTPHiddenToken"
+        ]);
+    }
+
     private function scenario_token_with_transactionId_and_transaction_pending(): TokenResult
     {
         $this->mockResponses->append(
@@ -50,7 +77,9 @@ class CreditMutuelServiceTest extends TestCase
         return $this->service->getAuthToken([
             "Login" => "myLogin",
             "Password" => "myPassword",
-            "transactionId" => "aTransactionId"
+            "transactionId" => "aTransactionId",
+            "validationUrl" => "https://avalidationurl",
+            "otp_hidden" => "anOTPHiddenToken"
         ]);
     }
 
@@ -82,12 +111,14 @@ class CreditMutuelServiceTest extends TestCase
 <html>
 <head><meta charset=\"UTF-8\"/></head>
 <body>
-<script type=\"text/javascript\">
+<form id=\"C:P:F\" action=\"/fr/banque/validation.aspx?_tabi=C&amp;_pid=OtpValidationPage&amp;k___ValidateAntiForgeryToken=aCsrfToken\">
+<input type=\"hidden\" name=\"otp_hidden\" value=\"anOtpHiddenToken\"/><script type=\"text/javascript\">
 var otpInMobileAppParameters = {
 	transactionId: 'aTransactionId'
 };
 </script>
 <div id=\"inMobileAppMessage\"> <h2 class=\"c otpSecuringNeeded\"> <img src=\"#\"> Votre connexion nécessite une sécurisation. </h2> <br/> <h2 class=\"c otpFontSizeIncreased\">Démarrez votre application mobile Crédit Mutuel depuis votre appareil \"<strong>MOTO G (5S) DE M MAXIME FALAIZE</strong>\" pour vérifier et confirmer votre identité.</h2><br> <br> <img src=\"#\"></div>
+</form>
 </body>
 </html>
             ") // get validation page
@@ -99,7 +130,9 @@ var otpInMobileAppParameters = {
                 "bankId" => "credit-mutuel",
                 "Login" => "myLogin",
                 "Password" => "myPassword",
-                "transactionId" => "aTransactionId"
+                "transactionId" => "aTransactionId",
+                "validationUrl" => "/fr/banque/validation.aspx?_tabi=C&_pid=OtpValidationPage&k___ValidateAntiForgeryToken=aCsrfToken",
+                "otp_hidden" => "anOtpHiddenToken"
             ]))
             ->willReturn("encryptedToken");
 
@@ -223,5 +256,31 @@ var otpInMobileAppParameters = {
         $this->assertNull($token->token);
         $this->assertNull($token->completedToken);
         $this->assertEquals("En attente de votre validation...", $token->message);
+    }
+
+    /**
+     * @test
+     */
+    public function getAuthToken_should_request_validation_url_with_otp_hidden_body_if_transaction_is_validated()
+    {
+        $this->scenario_token_with_transactionId_and_transaction_validated();
+
+        $request2 = $this->transactionsHistory[1]["request"];
+        $this->assertEquals("POST", $request2->getMethod());
+        $this->assertEquals("https://avalidationurl", (string)$request2->getUri());
+        $this->assertEquals("application/x-www-form-urlencoded", $request2->getHeaderLine("Content-Type"));
+        $this->assertEquals("otp_hidden=anOTPHiddenToken", (string)$request2->getBody());
+    }
+
+    /**
+     * @test
+     */
+    public function getAuthToken_should_return_complete_token_if_transaction_is_validated()
+    {
+        $token = $this->scenario_token_with_transactionId_and_transaction_validated();
+
+        $this->assertEquals("aCompleteEncryptedToken", $token->token);
+        $this->assertTrue($token->completedToken);
+        $this->assertNull($token->message);
     }
 }

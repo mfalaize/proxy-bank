@@ -5,6 +5,7 @@ namespace ProxyBank\Services\Banks;
 
 
 use DOMDocument;
+use DOMXPath;
 use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 use ProxyBank\Models\Bank;
@@ -21,6 +22,9 @@ class CreditMutuelService implements BankServiceInterface
     const LOGIN_INPUT = "Login";
     const PASSWORD_INPUT = "Password";
     const TRANSACTION_ID_INPUT = "transactionId";
+    const VALIDATION_URL_INPUT = "validationUrl";
+    const OTP_HIDDEN_INPUT = "otp_hidden";
+    const DSP2_TOKEN_INPUT = "auth_client_state";
 
     const DOMAIN = "www.creditmutuel.fr";
     const BASE_URL = 'https://' . self::DOMAIN;
@@ -65,7 +69,12 @@ class CreditMutuelService implements BankServiceInterface
         }
 
         if (isset($inputs[self::TRANSACTION_ID_INPUT])) {
-            return $this->processTransactionState($inputs[self::TRANSACTION_ID_INPUT]);
+            return $this->processTransactionState(
+                $inputs[self::LOGIN_INPUT],
+                $inputs[self::PASSWORD_INPUT],
+                $inputs[self::TRANSACTION_ID_INPUT],
+                $inputs[self::VALIDATION_URL_INPUT],
+                $inputs[self::OTP_HIDDEN_INPUT]);
         }
 
         return $this->processAuthentication($inputs[self::LOGIN_INPUT], $inputs[self::PASSWORD_INPUT]);
@@ -90,7 +99,9 @@ class CreditMutuelService implements BankServiceInterface
         }
     }
 
-    private function processTransactionState(string $transactionId): TokenResult
+    private function processTransactionState(string $login, string $password,
+                                             string $transactionId, string $validationUrl,
+                                             string $otpToken): TokenResult
     {
         $client = $this->buildClientHttp();
 
@@ -107,7 +118,27 @@ class CreditMutuelService implements BankServiceInterface
         $token = new TokenResult();
         if ($status == "PENDING") {
             $token->message = "En attente de votre validation...";
+        } else if ($status == "VALIDATED") {
+            // This call to the validation URL fill out the client cookie jar with the valid dsp2 token
+            $client->post($validationUrl, [
+                "form_params" => ([
+                    "otp_hidden" => $otpToken
+                ])
+            ]);
+
+            $dsp2Token = $client->getConfig("cookies")->getCookieByName("auth_client_state")->getValue();
+
+            $tokenJson = json_encode([
+                "bankId" => $this->getBank()->id,
+                self::LOGIN_INPUT => $login,
+                self::PASSWORD_INPUT => $password,
+                self::DSP2_TOKEN_INPUT => $dsp2Token
+            ]);
+
+            $token->token = $this->cryptoService->encrypt($tokenJson);
+            $token->completedToken = true;
         }
+        // TODO process cancelled transaction
         return $token;
     }
 
@@ -122,6 +153,12 @@ class CreditMutuelService implements BankServiceInterface
 
         $html = new DOMDocument();
         $html->loadHTML($htmlString, LIBXML_NOWARNING | LIBXML_NOERROR);
+
+        $validationUrl = $html->getElementById("C:P:F")->getAttribute("action");
+
+        $xpath = new DOMXPath($html);
+        $otpHidden = $xpath->query("//input[@name='otp_hidden']")->item(0)->getAttribute("value");
+
         $message = $html->getElementById("inMobileAppMessage")->textContent;
         $message = trim($message);
         $message = str_replace("  ", "", $message);
@@ -130,7 +167,9 @@ class CreditMutuelService implements BankServiceInterface
             "bankId" => $this->getBank()->id,
             self::LOGIN_INPUT => $login,
             self::PASSWORD_INPUT => $password,
-            self::TRANSACTION_ID_INPUT => $transactionId
+            self::TRANSACTION_ID_INPUT => $transactionId,
+            self::VALIDATION_URL_INPUT => $validationUrl,
+            self::OTP_HIDDEN_INPUT => $otpHidden
         ]);
 
         $token = new TokenResult();
