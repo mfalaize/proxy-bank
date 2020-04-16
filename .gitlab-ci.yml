@@ -5,18 +5,22 @@ cache:
     - vendor/
 
 before_script:
-  # Install git, the php image doesn't have installed
+  # Install git and libicu-dev (for intl), the php image doesn't have installed
   - apt-get update -yqq
-  - apt-get install git -yqq
+  - apt-get install git libicu-dev -yqq
 
-  # Install xdebug
+  # Install xdebug (for phpunit coverage) and intl
   - pecl install xdebug && docker-php-ext-enable xdebug
+  - docker-php-ext-install intl
 
   # Install composer
   - curl -sS https://getcomposer.org/installer | php
 
   # Install all project dependencies
   - php composer.phar install
+
+  # Generate *.res resource bundle files
+  - genrb --verbose --destdir locale/ --encoding utf-8 locale/*.txt
 
 stages:
   - test

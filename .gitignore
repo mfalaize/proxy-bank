@@ -1,6 +1,7 @@
 .idea/
 vendor/
 public/tests/
+locale/*.res
 src/secret.php
 *.iml
 .phpunit.result.cache

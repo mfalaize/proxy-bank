@@ -35,6 +35,8 @@ class FunctionalTestCase extends TestCase
 
         $this->app = $app = AppFactory::create();
 
+        require __DIR__ . "/../src/middlewares.php";
+
         require __DIR__ . "/../src/routes.php";
 
         $this->requestFactory = new ServerRequestFactory();

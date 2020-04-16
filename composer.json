@@ -12,7 +12,8 @@
     "ext-openssl": "*",
     "ext-json": "*",
     "ext-libxml": "*",
-    "ext-curl": "*"
+    "ext-curl": "*",
+    "ext-intl": "*"
   },
   "autoload": {
     "psr-0": {"Requests": "library/"},
