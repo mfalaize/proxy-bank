@@ -1,18 +1,19 @@
 <?php
 
 
-namespace ProxyBank\Helpers;
+namespace ProxyBank\Services;
 
 
 use MessageFormatter;
 use ResourceBundle;
 
-class IntlHelper
+class IntlService
 {
+
     /**
      * @var string
      */
-    private $locale;
+    public $locale;
 
     /**
      * @var ResourceBundle
@@ -36,13 +37,6 @@ class IntlHelper
             $this->locale,
             $this->resourceBundle->get($index),
             $args
-        );
+        ) ?: $index;
     }
-
-    public function __toString()
-    {
-        return $this->locale;
-    }
-
-
 }
