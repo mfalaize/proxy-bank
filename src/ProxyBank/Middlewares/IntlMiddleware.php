@@ -14,8 +14,6 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class IntlMiddleware implements MiddlewareInterface
 {
-    const DEFAULT_LOCALE = "en_US";
-
     /**
      * @var IntlService
      */
@@ -28,7 +26,7 @@ class IntlMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $locale = Locale::acceptFromHttp($request->getHeaderLine("Accept-Language")) ?: self::DEFAULT_LOCALE;
+        $locale = Locale::acceptFromHttp($request->getHeaderLine("Accept-Language")) ?: IntlService::DEFAULT_LOCALE;
         $this->intlService->setLocale($locale);
         return $handler->handle($request);
     }

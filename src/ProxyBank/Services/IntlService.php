@@ -9,6 +9,7 @@ use ResourceBundle;
 
 class IntlService
 {
+    const DEFAULT_LOCALE = "en_US";
 
     /**
      * @var string
@@ -19,6 +20,11 @@ class IntlService
      * @var ResourceBundle
      */
     private $resourceBundle;
+
+    public function __construct()
+    {
+        $this->setLocale(self::DEFAULT_LOCALE);
+    }
 
     public function setLocale(string $locale): IntlService
     {

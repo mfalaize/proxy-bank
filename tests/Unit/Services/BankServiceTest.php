@@ -4,12 +4,14 @@
 namespace Tests\Unit\Services;
 
 
+use DI\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Container;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankService;
 use ProxyBank\Services\CryptoService;
+use ProxyBank\Services\IntlService;
 
 class BankServiceTest extends TestCase
 {
@@ -19,12 +21,16 @@ class BankServiceTest extends TestCase
 
     private $cryptoService;
 
+    private $intlService;
+
     protected function setUp(): void
     {
         $this->cryptoService = $this->createMock(CryptoService::class);
         $this->container = $this->createMock(Container::class);
+        $this->intlService = new IntlService();
+        $this->intlService->setLocale("en_US");
 
-        $this->service = new BankService($this->container, $this->cryptoService);
+        $this->service = new BankService($this->container, $this->cryptoService, $this->intlService);
     }
 
     /**
@@ -54,7 +60,12 @@ class BankServiceTest extends TestCase
      */
     public function getAuthTokenWithUnencryptedInputs_should_return_token_with_error_message_if_no_bank_implementation_for_bankId()
     {
-        $token = $this->service->getAuthTokenWithUnencryptedInputs("null", []);
+        $this->container->expects($this->atLeastOnce())
+            ->method("get")
+            ->with("null")
+            ->willThrowException(new NotFoundException());
+
+        $token = $this->service->getAuthTokenWithUnencryptedInputs("null", null);
         $this->assertNull($token->token);
         $this->assertNull($token->completedToken);
         $this->assertEquals("Unknown null bankId", $token->message);
@@ -95,7 +106,7 @@ class BankServiceTest extends TestCase
             ->willReturn('{"test":"ok"}');
 
         $partialMockService = $this->getMockBuilder(BankService::class)
-            ->setConstructorArgs([$this->container, $this->cryptoService])
+            ->setConstructorArgs([$this->container, $this->cryptoService, $this->intlService])
             ->onlyMethods(["getAuthTokenWithUnencryptedInputs"])
             ->getMock();
         $partialMockService->expects($this->atLeastOnce())
