@@ -3,12 +3,14 @@
 use DI\ContainerBuilder;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
+use ProxyBank\Container;
+use ProxyBank\Services\Banks\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
 use Psr\Log\LoggerInterface;
 use Slim\Factory\AppFactory;
 use function DI\autowire;
 
-$builder = new ContainerBuilder();
+$builder = new ContainerBuilder(Container::class);
 $builder->useAnnotations(true);
 $builder->addDefinitions([
     LoggerInterface::class => autowire(Logger::class)
@@ -17,6 +19,9 @@ $builder->addDefinitions([
 
     CryptoService::class => autowire(CryptoService::class)
         ->constructorParameter("srcDir", __DIR__),
+
+    // Bank implementation services
+    CreditMutuelService::getBank()->id => autowire(CreditMutuelService::class)
 ]);
 
 AppFactory::setContainer($builder->build());

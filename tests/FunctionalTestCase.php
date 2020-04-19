@@ -4,8 +4,8 @@
 namespace Tests;
 
 
-use DI\Container;
 use PHPUnit\Framework\TestCase;
+use ProxyBank\Container;
 use Slim\App;
 use Slim\Factory\AppFactory;
 use Slim\Psr7\Factory\ServerRequestFactory;

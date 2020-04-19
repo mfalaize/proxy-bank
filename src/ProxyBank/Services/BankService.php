@@ -4,18 +4,16 @@
 namespace ProxyBank\Services;
 
 
+use ProxyBank\Container;
 use ProxyBank\Models\TokenResult;
 use Psr\Container\ContainerInterface;
-use ReflectionClass;
 
 class BankService
 {
 
     /**
-     * @var array
+     * @var Container
      */
-    public $bankImplementations;
-
     private $container;
 
     /**
@@ -23,37 +21,17 @@ class BankService
      */
     private $cryptoService;
 
-    public function __construct(ContainerInterface $container)
+    public function __construct(ContainerInterface $container, CryptoService $cryptoService)
     {
         $this->container = $container;
-
-        $this->cryptoService = $this->container->get(CryptoService::class);
-
-        $bankImplementationsFiles = glob(__DIR__ . "/Banks/*.php");
-        foreach ($bankImplementationsFiles as $bankImplementationFile) {
-            require_once $bankImplementationFile;
-        }
-
-        $bankImplementationsClasses = array_filter(
-            get_declared_classes(),
-            function ($className) use (&$bankImplementationsFiles) {
-                $classIsCorrectImplementation = in_array(BankServiceInterface::class, class_implements($className));
-                $reflectionClass = new ReflectionClass($className);
-                return $classIsCorrectImplementation && in_array($reflectionClass->getFileName(), $bankImplementationsFiles);
-            }
-        );
-
-        $this->bankImplementations = array_map(function ($bankImplementationClass) {
-            $reflectionClass = new ReflectionClass($bankImplementationClass);
-            return $reflectionClass->newInstance($this->container);
-        }, $bankImplementationsClasses);
+        $this->cryptoService = $cryptoService;
     }
 
     public function listAvailableBanks(): array
     {
         $banks = array_map(function ($bankImplementation) {
-            return $bankImplementation->getBank();
-        }, $this->bankImplementations);
+            return $bankImplementation::getBank();
+        }, $this->container->getBankImplementations());
 
         usort($banks, function ($a, $b) {
             return strcmp($a->name, $b->name);
@@ -62,24 +40,22 @@ class BankService
         return $banks;
     }
 
-    public function getAuthTokenWithBankId(string $bankId, array $inputs): TokenResult
+    public function getAuthTokenWithUnencryptedInputs(string $bankId, array $inputs): TokenResult
     {
-        $bankImplementation = array_filter($this->bankImplementations, function ($bankImplementation) use (&$bankId) {
-            return $bankImplementation->getBank()->id == $bankId;
-        });
+        $bankImplementation = $this->container->get($bankId);
 
-        if (sizeof($bankImplementation) == 0) {
+        if (is_null($bankImplementation)) {
             $token = new TokenResult();
             $token->message = "Unknown $bankId bankId";
             return $token;
         }
 
-        return array_values($bankImplementation)[0]->getAuthToken($inputs);
+        return $bankImplementation->getAuthToken($inputs);
     }
 
-    public function getAuthTokenWithToken(string $token): TokenResult
+    public function getAuthTokenWithEncryptedToken(string $bankId, string $token): TokenResult
     {
         $inputs = json_decode($this->cryptoService->decrypt($token), true);
-        return $this->getAuthTokenWithBankId($inputs["bankId"], $inputs);
+        return $this->getAuthTokenWithUnencryptedInputs($bankId, $inputs);
     }
 }

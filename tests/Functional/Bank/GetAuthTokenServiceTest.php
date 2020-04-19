@@ -21,28 +21,18 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
         $this->bankService = $this->createMock(BankService::class);
         $this->container->set(BankService::class, $this->bankService);
 
-        $this->request = $this->requestFactory->createServerRequest("POST", "/bank/token");
+        $this->request = $this->requestFactory->createServerRequest("POST", "/bank/credit-mutuel/token");
+        $this->request = $this->request->withHeader("Content-Type", "application/json");
     }
 
     /**
      * @test
      */
-    public function should_return_error_400_if_no_bankId_and_no_token()
-    {
-        $response = $this->app->handle($this->request);
-
-        $this->assertEquals(400, $response->getStatusCode());
-        $this->assertEquals("bankId or token parameter is required", $response->getReasonPhrase());
-    }
-
-    /**
-     * @test
-     */
-    public function should_call_bankService_getAuthTokenWithBankId_if_bankId_is_present()
+    public function should_call_bankService_getAuthTokenWithUnencryptedInputs_if_token_is_not_present()
     {
         $this->bankService->expects($this->atLeastOnce())
-            ->method("getAuthTokenWithBankId")
-            ->with("credit-mutuel", ["bankId" => "credit-mutuel", "test" => "ok"])
+            ->method("getAuthTokenWithUnencryptedInputs")
+            ->with("credit-mutuel", ["test" => "ok"])
             ->willReturnCallback(function () {
                 $token = new TokenResult();
                 $token->message = "A message";
@@ -50,7 +40,6 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
             });
 
         $this->request->getBody()->write(json_encode([
-            "bankId" => "credit-mutuel",
             "test" => "ok"
         ]));
         $response = $this->app->handle($this->request);
@@ -63,11 +52,11 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
     /**
      * @test
      */
-    public function should_call_bankService_getAuthTokenWithToken_if_token_is_present()
+    public function should_call_bankService_getAuthTokenWithEncryptedToken_if_token_is_present()
     {
         $this->bankService->expects($this->atLeastOnce())
-            ->method("getAuthTokenWithToken")
-            ->with("encryptedToken")
+            ->method("getAuthTokenWithEncryptedToken")
+            ->with("credit-mutuel", "encryptedToken")
             ->willReturnCallback(function () {
                 $token = new TokenResult();
                 $token->token = "anotherEncryptedToken";

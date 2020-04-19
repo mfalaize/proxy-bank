@@ -4,8 +4,8 @@
 namespace ProxyBank\Middlewares;
 
 
-use DI\Container;
 use Locale;
+use ProxyBank\Container;
 use ProxyBank\Services\IntlService;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;

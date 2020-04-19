@@ -13,7 +13,6 @@ use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\Banks\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
-use Psr\Container\ContainerInterface;
 
 class CreditMutuelServiceTest extends TestCase
 {
@@ -26,14 +25,7 @@ class CreditMutuelServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->cryptoService = $this->createMock(CryptoService::class);
-
-        $container = $this->createMock(ContainerInterface::class);
-        $container->expects($this->atLeastOnce())
-            ->method("get")
-            ->with(CryptoService::class)
-            ->willReturn($this->cryptoService);
-
-        $this->service = new CreditMutuelService($container);
+        $this->service = new CreditMutuelService($this->cryptoService);
 
         $this->mockResponses = new MockHandler();
         $this->service->handlerStack = HandlerStack::create($this->mockResponses);
@@ -52,7 +44,6 @@ class CreditMutuelServiceTest extends TestCase
         $this->cryptoService->expects($this->atLeastOnce())
             ->method("encrypt")
             ->with(json_encode([
-                "bankId" => "credit-mutuel",
                 "Login" => "myLogin",
                 "Password" => "myPassword",
                 "auth_client_state" => "anAuthClientStateToken"
@@ -153,7 +144,6 @@ var otpInMobileAppParameters = {
         $this->cryptoService->expects($this->atLeastOnce())
             ->method("encrypt")
             ->with(json_encode([
-                "bankId" => "credit-mutuel",
                 "Login" => "myLogin",
                 "Password" => "myPassword",
                 "transactionId" => "aTransactionId",

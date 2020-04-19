@@ -14,7 +14,6 @@ use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankServiceInterface;
 use ProxyBank\Services\CryptoService;
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 
 class CreditMutuelService implements BankServiceInterface
@@ -38,13 +37,13 @@ class CreditMutuelService implements BankServiceInterface
 
     private $cryptoService;
 
-    public function __construct(ContainerInterface $container)
+    public function __construct(CryptoService $cryptoService)
     {
         $this->handlerStack = HandlerStack::create();
-        $this->cryptoService = $container->get(CryptoService::class);
+        $this->cryptoService = $cryptoService;
     }
 
-    public function getBank(): Bank
+    public static function getBank(): Bank
     {
         $bank = new Bank();
         $bank->id = "credit-mutuel";
@@ -138,7 +137,6 @@ class CreditMutuelService implements BankServiceInterface
             $dsp2Token = $client->getConfig("cookies")->getCookieByName("auth_client_state")->getValue();
 
             $tokenJson = json_encode([
-                "bankId" => $this->getBank()->id,
                 self::LOGIN_INPUT => $login,
                 self::PASSWORD_INPUT => $password,
                 self::DSP2_TOKEN_INPUT => $dsp2Token
@@ -175,7 +173,6 @@ class CreditMutuelService implements BankServiceInterface
         $message = str_replace("  ", "", $message);
 
         $tokenJson = json_encode([
-            "bankId" => $this->getBank()->id,
             self::LOGIN_INPUT => $login,
             self::PASSWORD_INPUT => $password,
             self::TRANSACTION_ID_INPUT => $transactionId,

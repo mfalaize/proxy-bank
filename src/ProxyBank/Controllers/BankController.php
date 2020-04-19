@@ -23,22 +23,16 @@ class BankController
         return $response->withHeader("Content-Type", "application/json");
     }
 
-    public function getAuthToken(Request $request, Response $response)
+    public function getAuthToken(Request $request, Response $response, array $args)
     {
-        $params = json_decode((string)$request->getBody(), true);
+        $params = $request->getParsedBody();
 
         $token = null;
 
-        if (isset($params["bankId"])) {
-            $token = $this->bankService->getAuthTokenWithBankId($params["bankId"], $params);
-        }
-
         if (isset($params["token"])) {
-            $token = $this->bankService->getAuthTokenWithToken($params["token"]);
-        }
-
-        if (is_null($token)) {
-            return $response->withStatus(400, "bankId or token parameter is required");
+            $token = $this->bankService->getAuthTokenWithEncryptedToken($args["bankId"], $params["token"]);
+        } else {
+            $token = $this->bankService->getAuthTokenWithUnencryptedInputs($args["bankId"], $params);
         }
 
         $response->getBody()->write(json_encode($token));

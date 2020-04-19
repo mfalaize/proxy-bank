@@ -9,7 +9,7 @@ use ProxyBank\Models\TokenResult;
 
 interface BankServiceInterface
 {
-    public function getBank(): Bank;
+    public static function getBank(): Bank;
 
     public function getAuthToken(array $inputs): TokenResult;
 
