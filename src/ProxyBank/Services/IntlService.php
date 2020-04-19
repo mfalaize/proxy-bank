@@ -20,10 +20,11 @@ class IntlService
      */
     private $resourceBundle;
 
-    public function __construct(string $locale)
+    public function setLocale(string $locale): IntlService
     {
         $this->locale = $locale;
         $this->resourceBundle = ResourceBundle::create($locale, __DIR__ . "/../../../locale");
+        return $this;
     }
 
     /**

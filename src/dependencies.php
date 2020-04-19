@@ -7,9 +7,11 @@ use ProxyBank\Container;
 use ProxyBank\Services\Banks\AnotherBank;
 use ProxyBank\Services\Banks\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
+use ProxyBank\Services\IntlService;
 use Psr\Log\LoggerInterface;
 use Slim\Factory\AppFactory;
 use function DI\autowire;
+use function DI\create;
 
 $builder = new ContainerBuilder(Container::class);
 $builder->useAnnotations(true);
@@ -20,6 +22,8 @@ $builder->addDefinitions([
 
     CryptoService::class => autowire(CryptoService::class)
         ->constructorParameter("srcDir", __DIR__),
+
+    IntlService::class => create(IntlService::class),
 
     // Bank implementation services
     CreditMutuelService::getBank()->id => autowire(CreditMutuelService::class),
