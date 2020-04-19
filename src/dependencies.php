@@ -4,6 +4,7 @@ use DI\ContainerBuilder;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use ProxyBank\Container;
+use ProxyBank\Services\Banks\AnotherBank;
 use ProxyBank\Services\Banks\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
 use Psr\Log\LoggerInterface;
@@ -21,7 +22,7 @@ $builder->addDefinitions([
         ->constructorParameter("srcDir", __DIR__),
 
     // Bank implementation services
-    CreditMutuelService::getBank()->id => autowire(CreditMutuelService::class)
+    CreditMutuelService::getBank()->id => autowire(CreditMutuelService::class),
 ]);
 
 AppFactory::setContainer($builder->build());

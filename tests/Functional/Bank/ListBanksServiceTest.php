@@ -7,6 +7,7 @@ namespace Tests\Functional\Bank;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
 use ProxyBank\Services\BankService;
+use ProxyBank\Services\BankServiceInterface;
 use Tests\FunctionalTestCase;
 
 class ListBanksServiceTest extends FunctionalTestCase
@@ -57,5 +58,25 @@ class ListBanksServiceTest extends FunctionalTestCase
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals("application/json", $response->getHeaderLine("Content-Type"));
         $this->assertEquals('[{"id":"2","name":"Cr\u00e9dit Agricole","authInputs":[{"name":"Login","type":"text"},{"name":"Password","type":"password"}]},{"id":"1","name":"Cr\u00e9dit Mutuel","authInputs":[{"name":"Login","type":"text"},{"name":"Password","type":"password"}]}]', (string)$response->getBody());
+    }
+
+    /**
+     * @test
+     */
+    public function bankId_should_be_unique()
+    {
+        $bankImplementations = array_filter(
+            get_declared_classes(),
+            function ($className) {
+                return in_array(BankServiceInterface::class, class_implements($className));
+            }
+        );
+
+        foreach ($bankImplementations as $bankImplementation) {
+            $bankId = $bankImplementation::getBank()->id;
+            $containerBank = $this->container->get($bankId);
+            $this->assertInstanceOf($bankImplementation, $containerBank,
+                "bankId " . $bankId . " should be unique but is present in classes " . $bankImplementation . " and " . get_class($containerBank));
+        }
     }
 }
