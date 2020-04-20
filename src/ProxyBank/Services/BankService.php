@@ -62,7 +62,13 @@ class BankService
 
     public function getAuthTokenWithEncryptedToken(string $bankId, string $token): TokenResult
     {
-        $inputs = json_decode($this->cryptoService->decrypt($token), true);
+        $decrypted = $this->cryptoService->decrypt($token);
+        if (empty($decrypted)) {
+            $token = new TokenResult();
+            $token->message = $this->intlService->getErrorMessage("invalid.token");
+            return $token;
+        }
+        $inputs = json_decode($decrypted, true);
         return $this->getAuthTokenWithUnencryptedInputs($bankId, $inputs);
     }
 }

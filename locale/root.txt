@@ -4,5 +4,6 @@ root {
     errors {
         test { "The test for {0} passed!" }
         unknown.bankId { "Unknown {0} bankId" }
+        invalid.token { "Invalid token. Please authenticate again to generate a new token" }
     }
 }

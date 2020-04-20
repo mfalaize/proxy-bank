@@ -122,6 +122,23 @@ class BankServiceTest extends TestCase
 
         $this->assertEquals("A message", $token->message);
     }
+
+    /**
+     * @test
+     */
+    public function getAuthTokenWithEncryptedToken_should_return_error_message_if_token_cant_be_decrypted()
+    {
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn(""); // empty string means that decryption has failed
+
+        $token = $this->service->getAuthTokenWithEncryptedToken("credit-mutuel", "encryptedToken");
+
+        $this->assertNull($token->token);
+        $this->assertNull($token->completedToken);
+        $this->assertEquals("Invalid token. Please authenticate again to generate a new token", $token->message);
+    }
 }
 
 class TestCreditMutuel
