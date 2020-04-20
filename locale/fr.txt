@@ -1,5 +1,8 @@
 fr {
     test { "{0,number,integer} singes sur {1,number,integer} arbres font {2,number} singes par arbre" }
 
-    BankService.errors.unknown.bankId { "L'identifiant de la banque {0} n'existe pas" }
+    errors {
+        test { "Le test pour {0} est passé !" }
+        unknown.bankId { "L'identifiant de la banque {0} n'existe pas" }
+    }
 }

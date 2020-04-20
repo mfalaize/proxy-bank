@@ -46,4 +46,41 @@ class IntlServiceTest extends TestCase
             $intl->getMessage(-1)
         );
     }
+
+    /**
+     * @test
+     */
+    public function getErrorMessage_should_retrieve_message_in_errors_ResourceBundle_and_use_MessageFormatter_syntax()
+    {
+        $intl = new IntlService();
+        $intl->setLocale("en_US");
+        $this->assertEquals(
+            "The test for getErrorMessage passed!",
+            $intl->getErrorMessage("test", ["getErrorMessage"])
+        );
+
+        $intl->setLocale("fr_FR");
+        $this->assertEquals(
+            "Le test pour getErrorMessage est passé !",
+            $intl->getErrorMessage("test", ["getErrorMessage"])
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function getErrorMessage_should_return_key_string_it_value_does_not_exist_in_resource_bundle()
+    {
+        $intl = new IntlService();
+        $intl->setLocale("en_US");
+        $this->assertEquals(
+            "test.nonexistent",
+            $intl->getErrorMessage("test.nonexistent", [4560, 123, 4560 / 123])
+        );
+
+        $this->assertEquals(
+            "-1",
+            $intl->getErrorMessage(-1)
+        );
+    }
 }

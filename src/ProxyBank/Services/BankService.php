@@ -53,7 +53,7 @@ class BankService
             $bankImplementation = $this->container->get($bankId);
         } catch (NotFoundException $e) {
             $token = new TokenResult();
-            $token->message = $this->intlService->getMessage("BankService.errors.unknown.bankId", [$bankId]);
+            $token->message = $this->intlService->getErrorMessage("unknown.bankId", [$bankId]);
             return $token;
         }
 

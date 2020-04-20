@@ -1,0 +1,8 @@
+root {
+    test { "{0,number,integer} monkeys on {1,number,integer} trees make {2,number} monkeys per tree" }
+
+    errors {
+        test { "The test for {0} passed!" }
+        unknown.bankId { "Unknown {0} bankId" }
+    }
+}
