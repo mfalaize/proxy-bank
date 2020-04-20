@@ -124,8 +124,10 @@ class CreditMutuelService implements BankServiceInterface
         $token = new TokenResult();
         if ($status == "PENDING") {
             $token->message = "En attente de votre validation...";
+        } else if ($status == "CANCELLED") {
+            $token->message = "La transaction a été annulée";
         } else if ($status == "VALIDATED") {
-            // This call to the validation URL fill out the client cookie jar with the valid dsp2 token
+            // This call to the validation URL fills out the client cookie jar with the valid dsp2 token
             $client->post($validationUrl, [
                 "form_params" => ([
                     "otp_hidden" => $otpToken,
@@ -145,7 +147,6 @@ class CreditMutuelService implements BankServiceInterface
             $token->token = $this->cryptoService->encrypt($tokenJson);
             $token->completedToken = true;
         }
-        // TODO process cancelled transaction
         return $token;
     }
 

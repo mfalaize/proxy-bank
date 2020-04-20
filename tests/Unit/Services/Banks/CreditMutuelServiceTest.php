@@ -100,6 +100,34 @@ class CreditMutuelServiceTest extends TestCase
         ]);
     }
 
+    private function scenario_token_with_transactionId_and_transaction_cancelled(): TokenResult
+    {
+        $this->mockResponses->append(
+            new Response(200, [], "<root><code_retour>0000</code_retour><transactionState>CANCELLED</transactionState></root>")
+        );
+
+        return $this->service->getAuthToken([
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "transactionId" => "aTransactionId",
+            "validationUrl" => "https://www.creditmutuel.fr/avalidationurl",
+            "otp_hidden" => "anOTPHiddenToken",
+            "cookies" => [
+                [
+                    "Name" => "IdSes",
+                    "Value" => "sessionId",
+                    "Domain" => "www.creditmutuel.fr",
+                    "Path" => "/",
+                    "Max-Age" => null,
+                    "Expires" => null,
+                    "Secure" => true,
+                    "Discard" => false,
+                    "HttpOnly" => false
+                ]
+            ]
+        ]);
+    }
+
     private function scenario_login_failed(): TokenResult
     {
         $this->mockResponses->append(
@@ -286,6 +314,18 @@ var otpInMobileAppParameters = {
         $this->assertNull($token->token);
         $this->assertNull($token->completedToken);
         $this->assertEquals("En attente de votre validation...", $token->message);
+    }
+
+    /**
+     * @test
+     */
+    public function getAuthToken_should_return_message_if_transaction_is_cancelled()
+    {
+        $token = $this->scenario_token_with_transactionId_and_transaction_cancelled();
+
+        $this->assertNull($token->token);
+        $this->assertNull($token->completedToken);
+        $this->assertEquals("La transaction a été annulée", $token->message);
     }
 
     /**
