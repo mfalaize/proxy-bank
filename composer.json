@@ -7,7 +7,6 @@
     "doctrine/annotations": "^1.10",
     "monolog/monolog": "^2.0",
     "guzzlehttp/guzzle": "^6.5",
-    "rmccue/requests": ">=1.0",
     "ext-dom": "*",
     "ext-openssl": "*",
     "ext-json": "*",
