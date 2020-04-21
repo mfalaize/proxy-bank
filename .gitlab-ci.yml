@@ -35,6 +35,6 @@ deploy:
   stage: deploy
   script:
     - apt-get install lftp -yqq
-    - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rv ./ ./ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/"
+    - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rev ./ ./proxy-bank/ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/"
   only:
     - master
