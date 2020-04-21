@@ -4,6 +4,7 @@
 namespace ProxyBank\Controllers;
 
 
+use ProxyBank\Exceptions\EmptyParsedBodyException;
 use ProxyBank\Services\BankService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -28,6 +29,10 @@ class BankController
         $params = $request->getParsedBody();
 
         $token = null;
+
+        if (empty($params)) {
+            throw new EmptyParsedBodyException();
+        }
 
         if (isset($params["token"])) {
             $token = $this->bankService->getAuthTokenWithEncryptedToken($args["bankId"], $params["token"]);

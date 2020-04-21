@@ -3,7 +3,11 @@ root {
 
     errors {
         test { "The test for {0} passed!" }
-        unknown.bankId { "Unknown {0} bankId" }
-        invalid.token { "Invalid token. Please authenticate again to generate a new token" }
+
+        UnknownBankIdException { "Unknown {0} bankId" }
+        InvalidTokenException { "Invalid token. Please authenticate again to generate a new token" }
+        EmptyParsedBodyException { "Your request is empty or no Content-Type is provided" }
+        RequiredValueException { "{0} value is required" }
+        AuthenticationException { "{0}" }
     }
 }

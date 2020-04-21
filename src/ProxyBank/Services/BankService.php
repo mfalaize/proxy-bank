@@ -6,6 +6,8 @@ namespace ProxyBank\Services;
 
 use DI\NotFoundException;
 use ProxyBank\Container;
+use ProxyBank\Exceptions\InvalidTokenException;
+use ProxyBank\Exceptions\UnknownBankIdException;
 use ProxyBank\Models\TokenResult;
 use Psr\Container\ContainerInterface;
 
@@ -52,9 +54,7 @@ class BankService
         try {
             $bankImplementation = $this->container->get($bankId);
         } catch (NotFoundException $e) {
-            $token = new TokenResult();
-            $token->message = $this->intlService->getErrorMessage("unknown.bankId", [$bankId]);
-            return $token;
+            throw new UnknownBankIdException($bankId);
         }
 
         return $bankImplementation->getAuthToken($inputs);
@@ -64,9 +64,7 @@ class BankService
     {
         $decrypted = $this->cryptoService->decrypt($token);
         if (empty($decrypted)) {
-            $token = new TokenResult();
-            $token->message = $this->intlService->getErrorMessage("invalid.token");
-            return $token;
+            throw new InvalidTokenException();
         }
         $inputs = json_decode($decrypted, true);
         return $this->getAuthTokenWithUnencryptedInputs($bankId, $inputs);

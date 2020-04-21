@@ -9,6 +9,8 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
+use ProxyBank\Exceptions\AuthenticationException;
+use ProxyBank\Exceptions\RequiredValueException;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\Banks\CreditMutuelService;
@@ -217,25 +219,29 @@ var otpInMobileAppParameters = {
     /**
      * @test
      */
-    public function getAuthToken_should_return_error_message_when_no_login()
+    public function getAuthToken_should_throw_RequiredValueException_when_no_login()
     {
-        $token = $this->service->getAuthToken([]);
-        $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
-        $this->assertEquals("Login value is required", $token->message);
+        try {
+            $this->service->getAuthToken([]);
+            $this->fail("RequiredValueException is expected");
+        } catch (RequiredValueException $e) {
+            $this->assertEquals(["Login"], $e->messageFormatterArgs);
+        }
     }
 
     /**
      * @test
      */
-    public function getAuthToken_should_return_error_message_when_no_password()
+    public function getAuthToken_should_throw_RequiredValueException_message_when_no_password()
     {
-        $token = $this->service->getAuthToken([
-            "Login" => "myLogin"
-        ]);
-        $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
-        $this->assertEquals("Password value is required", $token->message);
+        try {
+            $this->service->getAuthToken([
+                "Login" => "myLogin"
+            ]);
+            $this->fail("RequiredValueException is required");
+        } catch (RequiredValueException $e) {
+            $this->assertEquals(["Password"], $e->messageFormatterArgs);
+        }
     }
 
     /**
@@ -280,13 +286,14 @@ var otpInMobileAppParameters = {
     /**
      * @test
      */
-    public function getAuthToken_should_return_error_message_if_login_failed()
+    public function getAuthToken_should_throw_AuthenticationException_if_login_failed()
     {
-        $token = $this->scenario_login_failed();
-
-        $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
-        $this->assertEquals("Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie", $token->message);
+        try {
+            $this->scenario_login_failed();
+            $this->fail("AuthenticationException is expected");
+        } catch (AuthenticationException $e) {
+            $this->assertEquals(["Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie"], $e->messageFormatterArgs);
+        }
     }
 
     /**

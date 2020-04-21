@@ -3,7 +3,9 @@ fr {
 
     errors {
         test { "Le test pour {0} est passé !" }
-        unknown.bankId { "L'identifiant de la banque {0} n'existe pas" }
-        invalid.token { "Le token est invalide. Veuillez vous réauthentifier pour générer un nouveau token" }
+        UnknownBankIdException { "L'identifiant de la banque {0} n'existe pas" }
+        InvalidTokenException { "Le token est invalide. Veuillez vous réauthentifier pour générer un nouveau token" }
+        EmptyParsedBodyException { "Votre requête est vide ou aucun Content-Type n'a été donné" }
+        RequiredValueException { "Le champ {0} est obligatoire" }
     }
 }

@@ -9,6 +9,8 @@ use DOMXPath;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\HandlerStack;
+use ProxyBank\Exceptions\AuthenticationException;
+use ProxyBank\Exceptions\RequiredValueException;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
@@ -58,15 +60,11 @@ class CreditMutuelService implements BankServiceInterface
     public function getAuthToken(array $inputs): TokenResult
     {
         if (!isset($inputs[self::LOGIN_INPUT])) {
-            $token = new TokenResult();
-            $token->message = self::LOGIN_INPUT . " value is required";
-            return $token;
+            throw new RequiredValueException(self::LOGIN_INPUT);
         }
 
         if (!isset($inputs[self::PASSWORD_INPUT])) {
-            $token = new TokenResult();
-            $token->message = self::PASSWORD_INPUT . " value is required";
-            return $token;
+            throw new RequiredValueException(self::PASSWORD_INPUT);
         }
 
         if (isset($inputs[self::TRANSACTION_ID_INPUT])) {
@@ -203,9 +201,7 @@ class CreditMutuelService implements BankServiceInterface
             }
         }
 
-        $token = new TokenResult();
-        $token->message = $errorMessage;
-        return $token;
+        throw new AuthenticationException($errorMessage);
     }
 
     private function buildClientHttp()

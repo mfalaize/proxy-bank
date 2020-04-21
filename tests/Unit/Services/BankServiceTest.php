@@ -7,6 +7,8 @@ namespace Tests\Unit\Services;
 use DI\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Container;
+use ProxyBank\Exceptions\InvalidTokenException;
+use ProxyBank\Exceptions\UnknownBankIdException;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankService;
@@ -58,17 +60,19 @@ class BankServiceTest extends TestCase
     /**
      * @test
      */
-    public function getAuthTokenWithUnencryptedInputs_should_return_token_with_error_message_if_no_bank_implementation_for_bankId()
+    public function getAuthTokenWithUnencryptedInputs_should_throw_UnknownBankIdException_if_no_bank_implementation_for_bankId()
     {
         $this->container->expects($this->atLeastOnce())
             ->method("get")
             ->with("null")
             ->willThrowException(new NotFoundException());
 
-        $token = $this->service->getAuthTokenWithUnencryptedInputs("null", null);
-        $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
-        $this->assertEquals("Unknown null bankId", $token->message);
+        try {
+            $token = $this->service->getAuthTokenWithUnencryptedInputs("null", null);
+            $this->fail("UnknownBankIdException is expected");
+        } catch (UnknownBankIdException $e) {
+            $this->assertEquals(["null"], $e->messageFormatterArgs);
+        }
     }
 
     /**
@@ -126,18 +130,18 @@ class BankServiceTest extends TestCase
     /**
      * @test
      */
-    public function getAuthTokenWithEncryptedToken_should_return_error_message_if_token_cant_be_decrypted()
+    public function getAuthTokenWithEncryptedToken_should_throw_InvalidTokenException_if_token_cant_be_decrypted()
     {
         $this->cryptoService->expects($this->atLeastOnce())
             ->method("decrypt")
             ->with("encryptedToken")
             ->willReturn(""); // empty string means that decryption has failed
 
-        $token = $this->service->getAuthTokenWithEncryptedToken("credit-mutuel", "encryptedToken");
-
-        $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
-        $this->assertEquals("Invalid token. Please authenticate again to generate a new token", $token->message);
+        try {
+            $token = $this->service->getAuthTokenWithEncryptedToken("credit-mutuel", "encryptedToken");
+            $this->fail("InvalidTokenException is expected");
+        } catch (InvalidTokenException $e) {
+        }
     }
 }
 
