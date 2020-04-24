@@ -43,4 +43,20 @@ class BankController
         $response->getBody()->write(json_encode($token));
         return $response->withHeader("Content-Type", "application/json");
     }
+
+    public function listAccounts(Request $request, Response $response, array $args)
+    {
+        $params = $request->getParsedBody();
+
+        $token = null;
+
+        if (empty($params) || empty($params["token"])) {
+            throw new EmptyParsedBodyException();
+        }
+
+        $accounts = $this->bankService->listAccounts($args["bankId"], $params["token"]);
+
+        $response->getBody()->write(json_encode($accounts));
+        return $response->withHeader("Content-Type", "application/json");
+    }
 }

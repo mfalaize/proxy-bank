@@ -51,22 +51,37 @@ class BankService
 
     public function getAuthTokenWithUnencryptedInputs(string $bankId, ?array $inputs): TokenResult
     {
-        try {
-            $bankImplementation = $this->container->get($bankId);
-        } catch (NotFoundException $e) {
-            throw new UnknownBankIdException($bankId);
-        }
-
-        return $bankImplementation->getAuthToken($inputs);
+        return $this->getBankImplementation($bankId)->getAuthToken($inputs);
     }
 
     public function getAuthTokenWithEncryptedToken(string $bankId, string $token): TokenResult
+    {
+        $inputs = $this->decryptInputsFromToken($token);
+        return $this->getAuthTokenWithUnencryptedInputs($bankId, $inputs);
+    }
+
+    public function listAccounts(string $bankId, string $token): array
+    {
+        $inputs = $this->decryptInputsFromToken($token);
+        return $this->getBankImplementation($bankId)->listAccounts($inputs);
+    }
+
+    private function getBankImplementation(string $bankId): BankServiceInterface
+    {
+        try {
+            return $this->container->get($bankId);
+        } catch (NotFoundException $e) {
+            throw new UnknownBankIdException($bankId);
+        }
+    }
+
+    private function decryptInputsFromToken(string $token): array
     {
         $decrypted = $this->cryptoService->decrypt($token);
         if (empty($decrypted)) {
             throw new InvalidTokenException();
         }
         $inputs = json_decode($decrypted, true);
-        return $this->getAuthTokenWithUnencryptedInputs($bankId, $inputs);
+        return $inputs;
     }
 }

@@ -12,6 +12,7 @@ use ProxyBank\Exceptions\UnknownBankIdException;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\BankService;
+use ProxyBank\Services\BankServiceInterface;
 use ProxyBank\Services\CryptoService;
 use ProxyBank\Services\IntlService;
 
@@ -68,7 +69,7 @@ class BankServiceTest extends TestCase
             ->willThrowException(new NotFoundException());
 
         try {
-            $token = $this->service->getAuthTokenWithUnencryptedInputs("null", null);
+            $this->service->getAuthTokenWithUnencryptedInputs("null", null);
             $this->fail("UnknownBankIdException is expected");
         } catch (UnknownBankIdException $e) {
             $this->assertEquals(["null"], $e->messageFormatterArgs);
@@ -80,7 +81,7 @@ class BankServiceTest extends TestCase
      */
     public function getAuthTokenWithUnencryptedInputs_should_return_bank_implementation_getAuthToken()
     {
-        $mock = $this->createMock(TestCreditMutuel::class);
+        $mock = $this->createMock(BankServiceInterface::class);
         $mock->expects($this->atLeastOnce())
             ->method("getAuthToken")
             ->with(["test" => "ok"])
@@ -138,9 +139,74 @@ class BankServiceTest extends TestCase
             ->willReturn(""); // empty string means that decryption has failed
 
         try {
-            $token = $this->service->getAuthTokenWithEncryptedToken("credit-mutuel", "encryptedToken");
+            $this->service->getAuthTokenWithEncryptedToken("credit-mutuel", "encryptedToken");
             $this->fail("InvalidTokenException is expected");
         } catch (InvalidTokenException $e) {
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function listAccounts_should_decrypt_token_and_decode_json_then_return_bank_implementation_listAccounts()
+    {
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn('{"test":"ok"}');
+
+        $mock = $this->createMock(BankServiceInterface::class);
+        $mock->expects($this->atLeastOnce())
+            ->method("listAccounts")
+            ->with(["test" => "ok"])
+            ->willReturn(["ok"]);
+
+        $this->container->expects($this->atLeastOnce())
+            ->method("get")
+            ->willReturn($mock);
+
+        $accounts = $this->service->listAccounts("credit-mutuel", "encryptedToken");
+
+        $this->assertEquals(["ok"], $accounts);
+    }
+
+    /**
+     * @test
+     */
+    public function listAccounts_should_throw_InvalidTokenException_if_token_cant_be_decrypted()
+    {
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn(""); // empty string means that decryption has failed
+
+        try {
+            $this->service->listAccounts("credit-mutuel", "encryptedToken");
+            $this->fail("InvalidTokenException is expected");
+        } catch (InvalidTokenException $e) {
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function listAccounts_should_throw_UnknownBankIdException_if_no_bank_implementation_for_bankId()
+    {
+        $this->container->expects($this->atLeastOnce())
+            ->method("get")
+            ->with("null")
+            ->willThrowException(new NotFoundException());
+
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn('{"test":"ok"}');
+
+        try {
+            $this->service->listAccounts("null", "encryptedToken");
+            $this->fail("UnknownBankIdException is expected");
+        } catch (UnknownBankIdException $e) {
+            $this->assertEquals(["null"], $e->messageFormatterArgs);
         }
     }
 }
@@ -154,10 +220,6 @@ class TestCreditMutuel
         $creditMutuel->id = "1";
         $creditMutuel->name = "Crédit Mutuel";
         return $creditMutuel;
-    }
-
-    public function getAuthToken(): TokenResult
-    {
     }
 }
 

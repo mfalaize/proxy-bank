@@ -4,7 +4,9 @@
 namespace ProxyBank\Models;
 
 
-class Account
+use JsonSerializable;
+
+class Account implements JsonSerializable
 {
     /**
      * @var string
@@ -20,4 +22,18 @@ class Account
      * @var int
      */
     public $balance;
+
+    public function jsonSerialize()
+    {
+        $json = [
+            "id" => $this->id,
+            "name" => $this->name
+        ];
+
+        if (!is_null($this->balance)) {
+            $json["balance"] = $this->balance;
+        }
+
+        return $json;
+    }
 }
