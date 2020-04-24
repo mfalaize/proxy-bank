@@ -11,6 +11,7 @@ use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\HandlerStack;
 use ProxyBank\Exceptions\AuthenticationException;
 use ProxyBank\Exceptions\RequiredValueException;
+use ProxyBank\Models\Account;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
@@ -34,6 +35,7 @@ class CreditMutuelService implements BankServiceInterface
     const AUTH_URL = '/fr/authentification.html';
     const VALIDATION_URL = '/fr/banque/validation.aspx';
     const OTP_TRANSACTION_STATE_URL = "/fr/banque/async/otp/SOSD_OTP_GetTransactionState.htm";
+    const DOWNLOAD_URL = "/fr/banque/compte/telechargement.cgi";
 
     public $handlerStack;
 
@@ -68,50 +70,50 @@ class CreditMutuelService implements BankServiceInterface
         }
 
         if (isset($inputs[self::TRANSACTION_ID_INPUT])) {
-            return $this->processTransactionState(
-                $inputs[self::LOGIN_INPUT],
-                $inputs[self::PASSWORD_INPUT],
-                $inputs[self::TRANSACTION_ID_INPUT],
-                $inputs[self::VALIDATION_URL_INPUT],
-                $inputs[self::OTP_HIDDEN_INPUT],
-                $inputs[self::COOKIES_INPUT]
-            );
+            return $this->processTransactionState($inputs);
         }
 
-        return $this->processAuthentication($inputs[self::LOGIN_INPUT], $inputs[self::PASSWORD_INPUT]);
+        $client = $this->processAuthentication($inputs);
+        return $this->processLoginSuccess($client, $inputs);
     }
 
-    private function processAuthentication(string $login, string $password): TokenResult
+    private function processAuthentication(array $inputs): Client
     {
         $client = $this->buildClientHttp();
 
+        if (isset($inputs[self::DSP2_TOKEN_INPUT])) {
+            $client->getConfig("cookies")->setCookie(new SetCookie([
+                "Domain" => self::DOMAIN,
+                "Name" => self::DSP2_TOKEN_INPUT,
+                "Value" => $inputs[self::DSP2_TOKEN_INPUT]
+            ]));
+        }
+
         $response = $client->post(self::AUTH_URL, [
             "form_params" => ([
-                "_cm_user" => $login,
-                "_cm_pwd" => $password,
+                "_cm_user" => $inputs[self::LOGIN_INPUT],
+                "_cm_pwd" => $inputs[self::PASSWORD_INPUT],
                 "flag" => "password"
             ])
         ]);
 
-        if ($response->getStatusCode() == 302) {
-            return $this->processLoginSuccess($client, $login, $password);
-        } else {
-            return $this->processLoginFailed($response);
+        if ($response->getStatusCode() != 302) {
+            $this->processLoginFailed($response);
         }
+
+        return $client;
     }
 
-    private function processTransactionState(string $login, string $password,
-                                             string $transactionId, string $validationUrl,
-                                             string $otpToken, array $cookies): TokenResult
+    private function processTransactionState(array $inputs): TokenResult
     {
         $client = $this->buildClientHttp();
-        foreach ($cookies as $cookie) {
+        foreach ($inputs[self::COOKIES_INPUT] as $cookie) {
             $client->getConfig("cookies")->setCookie(new SetCookie($cookie));
         }
 
         $response = $client->post(self::OTP_TRANSACTION_STATE_URL, [
             "form_params" => ([
-                "transactionId" => $transactionId
+                "transactionId" => $inputs[self::TRANSACTION_ID_INPUT]
             ])
         ]);
 
@@ -126,9 +128,9 @@ class CreditMutuelService implements BankServiceInterface
             $token->message = "La transaction a été annulée";
         } else if ($status == "VALIDATED") {
             // This call to the validation URL fills out the client cookie jar with the valid dsp2 token
-            $client->post($validationUrl, [
+            $client->post($inputs[self::VALIDATION_URL_INPUT], [
                 "form_params" => ([
-                    "otp_hidden" => $otpToken,
+                    "otp_hidden" => $inputs[self::OTP_HIDDEN_INPUT],
                     "_FID_DoValidate.x" => 0,
                     "_FID_DoValidate.y" => 0
                 ])
@@ -137,8 +139,8 @@ class CreditMutuelService implements BankServiceInterface
             $dsp2Token = $client->getConfig("cookies")->getCookieByName("auth_client_state")->getValue();
 
             $tokenJson = json_encode([
-                self::LOGIN_INPUT => $login,
-                self::PASSWORD_INPUT => $password,
+                self::LOGIN_INPUT => $inputs[self::LOGIN_INPUT],
+                self::PASSWORD_INPUT => $inputs[self::PASSWORD_INPUT],
                 self::DSP2_TOKEN_INPUT => $dsp2Token
             ]);
 
@@ -148,7 +150,7 @@ class CreditMutuelService implements BankServiceInterface
         return $token;
     }
 
-    private function processLoginSuccess(Client $client, string $login, string $password): TokenResult
+    private function processLoginSuccess(Client $client, array $inputs): TokenResult
     {
         $response = $client->get(self::VALIDATION_URL);
         $htmlString = (string)$response->getBody();
@@ -172,8 +174,8 @@ class CreditMutuelService implements BankServiceInterface
         $message = str_replace("  ", "", $message);
 
         $tokenJson = json_encode([
-            self::LOGIN_INPUT => $login,
-            self::PASSWORD_INPUT => $password,
+            self::LOGIN_INPUT => $inputs[self::LOGIN_INPUT],
+            self::PASSWORD_INPUT => $inputs[self::PASSWORD_INPUT],
             self::TRANSACTION_ID_INPUT => $transactionId,
             self::VALIDATION_URL_INPUT => $validationUrl,
             self::OTP_HIDDEN_INPUT => $otpHidden,
@@ -187,7 +189,7 @@ class CreditMutuelService implements BankServiceInterface
         return $token;
     }
 
-    private function processLoginFailed(ResponseInterface $response): TokenResult
+    private function processLoginFailed(ResponseInterface $response)
     {
         $html = new DOMDocument();
         $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
@@ -212,6 +214,31 @@ class CreditMutuelService implements BankServiceInterface
             "cookies" => true,
             "handler" => $this->handlerStack
         ]);
+    }
+
+    public function listAccounts(array $inputs): array
+    {
+        $client = $this->processAuthentication($inputs);
+
+        $response = $client->get(self::DOWNLOAD_URL);
+
+        $html = new DOMDocument();
+        $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
+
+        $accountNodes = $html->getElementById('account-table')->getElementsByTagName('label');
+        $accounts = [];
+        foreach ($accountNodes as $accountNode) {
+            $splitSpaces = preg_split('/ /', $accountNode->textContent, 4);
+            $accountNumber = join('', array_slice($splitSpaces, 0, 3));
+            $accountLabel = $splitSpaces[3];
+
+            $account = new Account();
+            $account->id = $accountNumber;
+            $account->name = $accountLabel;
+            $accounts[] = $account;
+        }
+
+        return $accounts;
     }
 
     public function fetchTransactions(string $accountId): array

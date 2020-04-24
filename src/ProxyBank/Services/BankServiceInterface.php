@@ -13,5 +13,7 @@ interface BankServiceInterface
 
     public function getAuthToken(array $inputs): TokenResult;
 
+    public function listAccounts(array $inputs): array;
+
     public function fetchTransactions(string $accountId): array;
 }

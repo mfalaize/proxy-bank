@@ -11,6 +11,7 @@ use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Exceptions\AuthenticationException;
 use ProxyBank\Exceptions\RequiredValueException;
+use ProxyBank\Models\Account;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Services\Banks\CreditMutuelService;
@@ -18,6 +19,40 @@ use ProxyBank\Services\CryptoService;
 
 class CreditMutuelServiceTest extends TestCase
 {
+    /**
+     * @var Response
+     */
+    private $RESPONSE_LOGIN_SUCCESS;
+    /**
+     * @var Response
+     */
+    private $RESPONSE_LOGIN_FAILED;
+    /**
+     * @var Response
+     */
+    private $RESPONSE_OTP_TRANSACTION_STATE_PENDING;
+    /**
+     * @var Response
+     */
+    private $RESPONSE_OTP_TRANSACTION_STATE_CANCELLED;
+    /**
+     * @var Response
+     */
+    private $RESPONSE_OTP_TRANSACTION_STATE_VALIDATED;
+    /**
+     * @var Response
+     */
+    private $RESPONSE_VALIDATION_TRANSACTION_STATE_PENDING;
+    /**
+     * @var Response
+     */
+    private $RESPONSE_VALIDATION_TRANSACTION_STATE_VALIDATED;
+
+    /**
+     * @var Response
+     */
+    private $RESPONSE_TELECHARGEMENT;
+
     private $service;
 
     private $mockResponses;
@@ -33,14 +68,62 @@ class CreditMutuelServiceTest extends TestCase
         $this->service->handlerStack = HandlerStack::create($this->mockResponses);
         $this->transactionsHistory = [];
         $this->service->handlerStack->push(Middleware::history($this->transactionsHistory));
+
+        $this->RESPONSE_LOGIN_SUCCESS = new Response(302, [
+            "Set-Cookie" => "IdSes=token; Path=/; Secure"
+        ]);
+        $this->RESPONSE_LOGIN_FAILED = new Response(200, [], "
+<html>
+<head><meta charset=\"UTF-8\"/></head>
+<body>
+<div id=\"ident\">
+<div class=\"blocmsg err\"><p>Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie</p></div>
+</body>
+</html>
+            ");
+        $this->RESPONSE_OTP_TRANSACTION_STATE_PENDING = new Response(200, [],
+            "<root><code_retour>0000</code_retour><transactionState>PENDING</transactionState></root>");
+        $this->RESPONSE_OTP_TRANSACTION_STATE_CANCELLED = new Response(200, [],
+            "<root><code_retour>0000</code_retour><transactionState>CANCELLED</transactionState></root>");
+        $this->RESPONSE_OTP_TRANSACTION_STATE_VALIDATED = new Response(200, [],
+            "<root><code_retour>0000</code_retour><transactionState>VALIDATED</transactionState></root>");
+        $this->RESPONSE_VALIDATION_TRANSACTION_STATE_PENDING = new Response(200, [], "
+<html>
+<head><meta charset=\"UTF-8\"/></head>
+<body>
+<form id=\"C:P:F\" action=\"/fr/banque/validation.aspx?_tabi=C&amp;_pid=OtpValidationPage&amp;k___ValidateAntiForgeryToken=aCsrfToken\">
+<input type=\"hidden\" name=\"otp_hidden\" value=\"anOtpHiddenToken\"/><script type=\"text/javascript\">
+var otpInMobileAppParameters = {
+	transactionId: 'aTransactionId'
+};
+</script>
+<div id=\"inMobileAppMessage\"> <h2 class=\"c otpSecuringNeeded\"> <img src=\"#\"> Votre connexion nécessite une sécurisation. </h2> <br/> <h2 class=\"c otpFontSizeIncreased\">Démarrez votre application mobile Crédit Mutuel depuis votre appareil \"<strong>MOTO G (5S) DE M MAXIME FALAIZE</strong>\" pour vérifier et confirmer votre identité.</h2><br> <br> <img src=\"#\"></div>
+</form>
+</body>
+</html>
+            ");
+        $this->RESPONSE_VALIDATION_TRANSACTION_STATE_VALIDATED = new Response(302, ["Set-Cookie" => "auth_client_state=anAuthClientStateToken"]);
+        $this->RESPONSE_TELECHARGEMENT = new Response(200, [], "
+<html>
+<head><meta charset=\"UTF-8\"/></head>
+<body>
+<table id=\"account-table\">
+<tbody>
+<tr><td></td><td><label>36025 000123456 01 COMPTE CHEQUE EUROCOMPTE M T TEST</label></td></tr>
+<tr><td></td><td><label>36025 000123456 02 COMPTE CHEQUE EUROCOMPTE MME M TEST</label></td></tr>
+<tr><td></td><td><label>36025 000123456 03 LIVRET BLEU EUROCOMPTE M T TEST</label></td></tr>
+</tbody>
+</table>
+</body>
+</html>
+            ");
     }
 
-    private function scenario_token_with_transactionId_and_transaction_validated(): TokenResult
+    private function scenario_get_auth_token_with_otp_transaction_validated(): TokenResult
     {
         $this->mockResponses->append(
-            new Response(200, [],
-                "<root><code_retour>0000</code_retour><transactionState>VALIDATED</transactionState></root>"),
-            new Response(302, ["Set-Cookie" => "auth_client_state=anAuthClientStateToken"])
+            $this->RESPONSE_OTP_TRANSACTION_STATE_VALIDATED,
+            $this->RESPONSE_VALIDATION_TRANSACTION_STATE_VALIDATED
         );
 
         $this->cryptoService->expects($this->atLeastOnce())
@@ -74,10 +157,10 @@ class CreditMutuelServiceTest extends TestCase
         ]);
     }
 
-    private function scenario_token_with_transactionId_and_transaction_pending(): TokenResult
+    private function scenario_get_auth_token_with_otp_transaction_pending(): TokenResult
     {
         $this->mockResponses->append(
-            new Response(200, [], "<root><code_retour>0000</code_retour><transactionState>PENDING</transactionState></root>")
+            $this->RESPONSE_OTP_TRANSACTION_STATE_PENDING
         );
 
         return $this->service->getAuthToken([
@@ -102,10 +185,10 @@ class CreditMutuelServiceTest extends TestCase
         ]);
     }
 
-    private function scenario_token_with_transactionId_and_transaction_cancelled(): TokenResult
+    private function scenario_get_auth_token_with_otp_transaction_cancelled(): TokenResult
     {
         $this->mockResponses->append(
-            new Response(200, [], "<root><code_retour>0000</code_retour><transactionState>CANCELLED</transactionState></root>")
+            $this->RESPONSE_OTP_TRANSACTION_STATE_CANCELLED
         );
 
         return $this->service->getAuthToken([
@@ -130,18 +213,10 @@ class CreditMutuelServiceTest extends TestCase
         ]);
     }
 
-    private function scenario_login_failed(): TokenResult
+    private function scenario_get_auth_token_with_login_failed(): TokenResult
     {
         $this->mockResponses->append(
-            new Response(200, [], "
-<html>
-<head><meta charset=\"UTF-8\"/></head>
-<body>
-<div id=\"ident\">
-<div class=\"blocmsg err\"><p>Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie</p></div>
-</body>
-</html>
-            ") // login failed
+            $this->RESPONSE_LOGIN_FAILED
         );
 
         return $this->service->getAuthToken([
@@ -150,25 +225,11 @@ class CreditMutuelServiceTest extends TestCase
         ]);
     }
 
-    private function scenario_login_success(): TokenResult
+    private function scenario_get_auth_token_with_login_success(): TokenResult
     {
         $this->mockResponses->append(
-            new Response(302, ["Set-Cookie" => "IdSes=token; Path=/; Secure"]), // login success
-            new Response(200, [], "
-<html>
-<head><meta charset=\"UTF-8\"/></head>
-<body>
-<form id=\"C:P:F\" action=\"/fr/banque/validation.aspx?_tabi=C&amp;_pid=OtpValidationPage&amp;k___ValidateAntiForgeryToken=aCsrfToken\">
-<input type=\"hidden\" name=\"otp_hidden\" value=\"anOtpHiddenToken\"/><script type=\"text/javascript\">
-var otpInMobileAppParameters = {
-	transactionId: 'aTransactionId'
-};
-</script>
-<div id=\"inMobileAppMessage\"> <h2 class=\"c otpSecuringNeeded\"> <img src=\"#\"> Votre connexion nécessite une sécurisation. </h2> <br/> <h2 class=\"c otpFontSizeIncreased\">Démarrez votre application mobile Crédit Mutuel depuis votre appareil \"<strong>MOTO G (5S) DE M MAXIME FALAIZE</strong>\" pour vérifier et confirmer votre identité.</h2><br> <br> <img src=\"#\"></div>
-</form>
-</body>
-</html>
-            ") // get validation page
+            $this->RESPONSE_LOGIN_SUCCESS,
+            $this->RESPONSE_VALIDATION_TRANSACTION_STATE_PENDING
         );
 
         $this->cryptoService->expects($this->atLeastOnce())
@@ -198,6 +259,32 @@ var otpInMobileAppParameters = {
         return $this->service->getAuthToken([
             "Login" => "myLogin",
             "Password" => "myPassword"
+        ]);
+    }
+
+    private function scenario_list_accounts_with_login_failed(): array
+    {
+        $this->mockResponses->append(
+            $this->RESPONSE_LOGIN_FAILED
+        );
+
+        return $this->service->listAccounts([
+            "Login" => "myLogin",
+            "Password" => "myPassword"
+        ]);
+    }
+
+    private function scenario_list_accounts_with_login_success(): array
+    {
+        $this->mockResponses->append(
+            $this->RESPONSE_LOGIN_SUCCESS,
+            $this->RESPONSE_TELECHARGEMENT
+        );
+
+        return $this->service->listAccounts([
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "auth_client_state" => "anAuthClientStateToken"
         ]);
     }
 
@@ -249,7 +336,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_post_login_password_to_auth_url()
     {
-        $this->scenario_login_success();
+        $this->scenario_get_auth_token_with_login_success();
 
         $request1 = $this->transactionsHistory[0]["request"];
         $this->assertEquals("POST", $request1->getMethod());
@@ -263,7 +350,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_request_validation_page_after_login_success_and_no_dsp2_cookie()
     {
-        $this->scenario_login_success();
+        $this->scenario_get_auth_token_with_login_success();
 
         $request2 = $this->transactionsHistory[1]["request"];
         $this->assertEquals("GET", $request2->getMethod());
@@ -276,7 +363,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_return_encrypted_token_with_transactionId_from_validation_page_when_no_dsp2_cookie()
     {
-        $token = $this->scenario_login_success();
+        $token = $this->scenario_get_auth_token_with_login_success();
 
         $this->assertEquals("encryptedToken", $token->token);
         $this->assertFalse($token->completedToken);
@@ -289,7 +376,7 @@ var otpInMobileAppParameters = {
     public function getAuthToken_should_throw_AuthenticationException_if_login_failed()
     {
         try {
-            $this->scenario_login_failed();
+            $this->scenario_get_auth_token_with_login_failed();
             $this->fail("AuthenticationException is expected");
         } catch (AuthenticationException $e) {
             $this->assertEquals(["Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie"], $e->messageFormatterArgs);
@@ -301,7 +388,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_request_otp_transaction_url_to_know_transaction_status()
     {
-        $this->scenario_token_with_transactionId_and_transaction_pending();
+        $this->scenario_get_auth_token_with_otp_transaction_pending();
 
         $request1 = $this->transactionsHistory[0]["request"];
         $this->assertEquals("POST", $request1->getMethod());
@@ -316,7 +403,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_return_message_if_transaction_is_pending()
     {
-        $token = $this->scenario_token_with_transactionId_and_transaction_pending();
+        $token = $this->scenario_get_auth_token_with_otp_transaction_pending();
 
         $this->assertNull($token->token);
         $this->assertNull($token->completedToken);
@@ -328,7 +415,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_return_message_if_transaction_is_cancelled()
     {
-        $token = $this->scenario_token_with_transactionId_and_transaction_cancelled();
+        $token = $this->scenario_get_auth_token_with_otp_transaction_cancelled();
 
         $this->assertNull($token->token);
         $this->assertNull($token->completedToken);
@@ -340,7 +427,7 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_request_validation_url_with_otp_hidden_body_if_transaction_is_validated()
     {
-        $this->scenario_token_with_transactionId_and_transaction_validated();
+        $this->scenario_get_auth_token_with_otp_transaction_validated();
 
         $request2 = $this->transactionsHistory[1]["request"];
         $this->assertEquals("POST", $request2->getMethod());
@@ -355,10 +442,51 @@ var otpInMobileAppParameters = {
      */
     public function getAuthToken_should_return_complete_token_if_transaction_is_validated()
     {
-        $token = $this->scenario_token_with_transactionId_and_transaction_validated();
+        $token = $this->scenario_get_auth_token_with_otp_transaction_validated();
 
         $this->assertEquals("aCompleteEncryptedToken", $token->token);
         $this->assertTrue($token->completedToken);
         $this->assertNull($token->message);
+    }
+
+    /**
+     * @test
+     */
+    public function listAccounts_should_throw_AuthenticationException_if_login_failed()
+    {
+        try {
+            $this->scenario_list_accounts_with_login_failed();
+            $this->fail("AuthenticationException is expected");
+        } catch (AuthenticationException $e) {
+            $this->assertEquals(["Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie"], $e->messageFormatterArgs);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function listAccounts_should_return_accounts_list_from_download_page()
+    {
+        $accounts = $this->scenario_list_accounts_with_login_success();
+
+        $request1 = $this->transactionsHistory[0]["request"];
+        $request2 = $this->transactionsHistory[1]["request"];
+
+        // Authenticate first with dsp2 token
+        $this->assertEquals("POST", $request1->getMethod());
+        $this->assertEquals("https://www.creditmutuel.fr/fr/authentification.html", (string)$request1->getUri());
+        $this->assertEquals("application/x-www-form-urlencoded", $request1->getHeaderLine("Content-Type"));
+        $this->assertEquals("_cm_user=myLogin&_cm_pwd=myPassword&flag=password", (string)$request1->getBody());
+        $this->assertEquals("auth_client_state=anAuthClientStateToken", $request1->getHeaderLine("Cookie"));
+
+        // Then get download page
+        $this->assertEquals("GET", $request2->getMethod());
+        $this->assertEquals("https://www.creditmutuel.fr/fr/banque/compte/telechargement.cgi", (string)$request2->getUri());
+
+        $this->assertInstanceOf(Account::class, $accounts[0]);
+        $this->assertEquals(3, sizeof($accounts));
+        $this->assertEquals("3602500012345601", $accounts[0]->id);
+        $this->assertEquals("COMPTE CHEQUE EUROCOMPTE M T TEST", $accounts[0]->name);
+        $this->assertNull($accounts[0]->balance);
     }
 }
