@@ -10,7 +10,7 @@ $app->group("/bank", function (RouteCollectorProxy $group) {
         $group->post("/token", BankController::class . ":getAuthToken");
 
         $group->group("/account", function (RouteCollectorProxy $group) {
-            $group->get("/list", BankController::class . ":listAccounts");
+            $group->post("/list", BankController::class . ":listAccounts");
         });
     });
 });

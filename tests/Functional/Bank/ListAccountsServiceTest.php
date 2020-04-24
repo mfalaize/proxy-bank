@@ -20,7 +20,7 @@ class ListAccountsServiceTest extends FunctionalTestCase
         $this->bankService = $this->createMock(BankService::class);
         $this->container->set(BankService::class, $this->bankService);
 
-        $this->request = $this->requestFactory->createServerRequest("GET", "/bank/credit-mutuel/account/list");
+        $this->request = $this->requestFactory->createServerRequest("POST", "/bank/credit-mutuel/account/list");
         $this->request = $this->request->withHeader("Content-Type", "application/json")
             ->withHeader("Accept", "application/json");
     }
