@@ -4,17 +4,21 @@
 namespace ProxyBank\Services\Banks;
 
 
+use DateTime;
 use DOMDocument;
 use DOMXPath;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\HandlerStack;
 use ProxyBank\Exceptions\AuthenticationException;
+use ProxyBank\Exceptions\DSP2TokenExpiredOrInvalidException;
 use ProxyBank\Exceptions\RequiredValueException;
+use ProxyBank\Exceptions\UnknownAccountIdException;
 use ProxyBank\Models\Account;
 use ProxyBank\Models\Bank;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
+use ProxyBank\Models\Transaction;
 use ProxyBank\Services\BankServiceInterface;
 use ProxyBank\Services\CryptoService;
 use Psr\Http\Message\ResponseInterface;
@@ -36,6 +40,12 @@ class CreditMutuelService implements BankServiceInterface
     const VALIDATION_URL = '/fr/banque/validation.aspx';
     const OTP_TRANSACTION_STATE_URL = "/fr/banque/async/otp/SOSD_OTP_GetTransactionState.htm";
     const DOWNLOAD_URL = "/fr/banque/compte/telechargement.cgi";
+
+    const CSV_FORMAT_EXCEL_XP = 2;
+    const CSV_DATE_FRENCH_FORMAT = 0;
+    const CSV_FIELD_SEPARATOR_SEMICOLON = 0;
+    const CSV_DECIMAL_SEPARATOR_DOT = 1;
+    const CSV_ONE_COLUMN_PER_AMOUNT = 0;
 
     public $handlerStack;
 
@@ -80,8 +90,9 @@ class CreditMutuelService implements BankServiceInterface
     private function processAuthentication(array $inputs): Client
     {
         $client = $this->buildClientHttp();
+        $hasDSP2Token = isset($inputs[self::DSP2_TOKEN_INPUT]);
 
-        if (isset($inputs[self::DSP2_TOKEN_INPUT])) {
+        if ($hasDSP2Token) {
             $client->getConfig("cookies")->setCookie(new SetCookie([
                 "Domain" => self::DOMAIN,
                 "Name" => self::DSP2_TOKEN_INPUT,
@@ -99,6 +110,8 @@ class CreditMutuelService implements BankServiceInterface
 
         if ($response->getStatusCode() != 302) {
             $this->processLoginFailed($response);
+        } else if ($hasDSP2Token && $response->getHeaderLine("Location") == self::BASE_URL . self::VALIDATION_URL) {
+            throw new DSP2TokenExpiredOrInvalidException(self::getBank()->name);
         }
 
         return $client;
@@ -229,20 +242,86 @@ class CreditMutuelService implements BankServiceInterface
         $accounts = [];
         foreach ($accountNodes as $accountNode) {
             $splitSpaces = preg_split('/ /', $accountNode->textContent, 4);
-            $accountNumber = join('', array_slice($splitSpaces, 0, 3));
-            $accountLabel = $splitSpaces[3];
+            $accountId = join('', array_slice($splitSpaces, 0, 3));
+            $accountName = $splitSpaces[3];
 
             $account = new Account();
-            $account->id = $accountNumber;
-            $account->name = $accountLabel;
+            $account->id = $accountId;
+            $account->name = $accountName;
             $accounts[] = $account;
         }
 
         return $accounts;
     }
 
-    public function fetchTransactions(string $accountId): array
+    public function fetchTransactions(string $accountId, array $inputs): array
     {
-        return [];
+        $client = $this->processAuthentication($inputs);
+
+        $response = $client->get(self::DOWNLOAD_URL);
+
+        $html = new DOMDocument();
+        $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
+
+        $downloadCsvUrl = $html->getElementById('P:F')->getAttribute('action');
+
+        $accountNodes = $html->getElementById('account-table')->getElementsByTagName('label');
+        $accountCheckboxName = null;
+
+        foreach ($accountNodes as $accountNode) {
+            $splitSpaces = preg_split('/ /', $accountNode->textContent, 4);
+            $accountNodeId = join('', array_slice($splitSpaces, 0, 3));
+
+            if ($accountId == $accountNodeId) {
+                $accountCheckboxId = $accountNode->getAttribute("for");
+                $accountCheckboxName = $html->getElementById($accountCheckboxId)->getAttribute("name");
+                break;
+            }
+        }
+
+        if (is_null($accountCheckboxName)) {
+            throw new UnknownAccountIdException($accountId);
+        }
+
+        $response = $client->post($downloadCsvUrl, [
+            "form_params" => ([
+                "data_formats_selected" => "csv",
+                "data_formats_options_csv_fileformat" => self::CSV_FORMAT_EXCEL_XP,
+                "data_formats_options_csv_dateformat" => self::CSV_DATE_FRENCH_FORMAT,
+                "data_formats_options_csv_fieldseparator" => self::CSV_FIELD_SEPARATOR_SEMICOLON,
+                "data_formats_options_csv_amountcolnumber" => self::CSV_ONE_COLUMN_PER_AMOUNT,
+                "data_formats_options_csv_decimalseparator" => self::CSV_DECIMAL_SEPARATOR_DOT,
+                $accountCheckboxName => "on",
+                "_FID_DoDownload.x" => 0,
+                "_FID_DoValidate.y" => 0
+            ])
+        ]);
+
+        return $this->convertCsvToTransactions((string)$response->getBody());
+    }
+
+    private function convertCsvToTransactions(string $csv): array
+    {
+        $lineSeparator = "\n";
+        $fieldSeparator = ';';
+        strtok($csv, $lineSeparator);
+
+        $transactions = array();
+
+        $line = strtok($lineSeparator);
+
+        while ($line !== false) {
+            $fields = preg_split('/' . $fieldSeparator . '/', $line);
+            $transaction = new Transaction();
+            $transaction->date = DateTime::createFromFormat('d/m/Y H:i:s', $fields[0] . '00:00:00');
+            $transaction->description = $fields[3];
+            $transaction->amount = $fields[2];
+            $transaction->accountBalance = $fields[4];
+            $transactions[] = $transaction;
+
+            $line = strtok($lineSeparator);
+        }
+
+        return $transactions;
     }
 }

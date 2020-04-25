@@ -15,5 +15,5 @@ interface BankServiceInterface
 
     public function listAccounts(array $inputs): array;
 
-    public function fetchTransactions(string $accountId): array;
+    public function fetchTransactions(string $accountId, array $inputs): array;
 }

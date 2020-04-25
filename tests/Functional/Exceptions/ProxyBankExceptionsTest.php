@@ -5,9 +5,11 @@ namespace Tests\Functional\Exceptions;
 
 
 use ProxyBank\Exceptions\AuthenticationException;
+use ProxyBank\Exceptions\DSP2TokenExpiredOrInvalidException;
 use ProxyBank\Exceptions\EmptyParsedBodyException;
 use ProxyBank\Exceptions\InvalidTokenException;
 use ProxyBank\Exceptions\RequiredValueException;
+use ProxyBank\Exceptions\UnknownAccountIdException;
 use ProxyBank\Exceptions\UnknownBankIdException;
 use ProxyBank\Services\BankService;
 use Tests\FunctionalTestCase;
@@ -101,5 +103,35 @@ class ProxyBankExceptionsTest extends FunctionalTestCase
 
         $this->assertEquals(400, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString('{"message":"Unknown MyBankId bankId"}', (string)$response->getBody());
+    }
+
+    /**
+     * @test
+     */
+    public function UnknownAccountId_should_return_400()
+    {
+        $this->bankService->expects($this->atLeastOnce())
+            ->method("listAvailableBanks")
+            ->willThrowException(new UnknownAccountIdException("0123456"));
+
+        $response = $this->app->handle($this->request);
+
+        $this->assertEquals(400, $response->getStatusCode());
+        $this->assertJsonStringEqualsJsonString('{"message":"Unknown 0123456 accountId"}', (string)$response->getBody());
+    }
+
+    /**
+     * @test
+     */
+    public function DSP2TokenExpiredOrInvalidException_should_return_401()
+    {
+        $this->bankService->expects($this->atLeastOnce())
+            ->method("listAvailableBanks")
+            ->willThrowException(new DSP2TokenExpiredOrInvalidException("Crédit Mutuel"));
+
+        $response = $this->app->handle($this->request);
+
+        $this->assertEquals(401, $response->getStatusCode());
+        $this->assertJsonStringEqualsJsonString('{"message":"Invalid or expired authentication for bank Cr\u00e9dit Mutuel"}', (string)$response->getBody());
     }
 }

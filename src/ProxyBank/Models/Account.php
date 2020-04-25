@@ -18,22 +18,11 @@ class Account implements JsonSerializable
      */
     public $name;
 
-    /**
-     * @var int
-     */
-    public $balance;
-
     public function jsonSerialize()
     {
-        $json = [
+        return [
             "id" => $this->id,
             "name" => $this->name
         ];
-
-        if (!is_null($this->balance)) {
-            $json["balance"] = $this->balance;
-        }
-
-        return $json;
     }
 }

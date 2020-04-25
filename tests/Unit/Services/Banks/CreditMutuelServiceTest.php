@@ -4,16 +4,20 @@
 namespace Tests\Unit\Services\Banks;
 
 
+use DateTime;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Exceptions\AuthenticationException;
+use ProxyBank\Exceptions\DSP2TokenExpiredOrInvalidException;
 use ProxyBank\Exceptions\RequiredValueException;
+use ProxyBank\Exceptions\UnknownAccountIdException;
 use ProxyBank\Models\Account;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
+use ProxyBank\Models\Transaction;
 use ProxyBank\Services\Banks\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
 
@@ -22,7 +26,12 @@ class CreditMutuelServiceTest extends TestCase
     /**
      * @var Response
      */
-    private $RESPONSE_LOGIN_SUCCESS;
+    private $RESPONSE_LOGIN_SUCCESS_WITHOUT_DSP2_TOKEN;
+
+    /**
+     * @var Response
+     */
+    private $RESPONSE_LOGIN_SUCCESS_WITH_DSP2_TOKEN;
     /**
      * @var Response
      */
@@ -51,7 +60,12 @@ class CreditMutuelServiceTest extends TestCase
     /**
      * @var Response
      */
-    private $RESPONSE_TELECHARGEMENT;
+    private $RESPONSE_DOWNLOAD_PAGE;
+
+    /**
+     * @var Response
+     */
+    private $RESPONSE_DOWNLOAD_CSV;
 
     private $service;
 
@@ -69,8 +83,13 @@ class CreditMutuelServiceTest extends TestCase
         $this->transactionsHistory = [];
         $this->service->handlerStack->push(Middleware::history($this->transactionsHistory));
 
-        $this->RESPONSE_LOGIN_SUCCESS = new Response(302, [
-            "Set-Cookie" => "IdSes=token; Path=/; Secure"
+        $this->RESPONSE_LOGIN_SUCCESS_WITHOUT_DSP2_TOKEN = new Response(302, [
+            "Set-Cookie" => "IdSes=token; Path=/; Secure",
+            "Location" => "https://www.creditmutuel.fr/fr/banque/validation.aspx"
+        ]);
+        $this->RESPONSE_LOGIN_SUCCESS_WITH_DSP2_TOKEN = new Response(302, [
+            "Set-Cookie" => "IdSes=token; Path=/; Secure",
+            "Location" => "https://www.creditmutuel.fr/fr/banque/pageaccueil.html"
         ]);
         $this->RESPONSE_LOGIN_FAILED = new Response(200, [], "
 <html>
@@ -103,20 +122,26 @@ var otpInMobileAppParameters = {
 </html>
             ");
         $this->RESPONSE_VALIDATION_TRANSACTION_STATE_VALIDATED = new Response(302, ["Set-Cookie" => "auth_client_state=anAuthClientStateToken"]);
-        $this->RESPONSE_TELECHARGEMENT = new Response(200, [], "
+        $this->RESPONSE_DOWNLOAD_PAGE = new Response(200, [], "
 <html>
 <head><meta charset=\"UTF-8\"/></head>
 <body>
+<form id=\"P:F\" action=\"/fr/banque/compte/telechargement.cgi?withParameters=true\">
 <table id=\"account-table\">
 <tbody>
-<tr><td></td><td><label>36025 000123456 01 COMPTE CHEQUE EUROCOMPTE M T TEST</label></td></tr>
-<tr><td></td><td><label>36025 000123456 02 COMPTE CHEQUE EUROCOMPTE MME M TEST</label></td></tr>
-<tr><td></td><td><label>36025 000123456 03 LIVRET BLEU EUROCOMPTE M T TEST</label></td></tr>
+<tr><td><input id=\"F_0.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_ischecked\" type=\"checkbox\"/></td><td><label for=\"F_1.accountCheckbox:DataEntry\">36025 000123456 01 COMPTE CHEQUE EUROCOMPTE M T TEST</label></td></tr>
+<tr><td><input id=\"F_1.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_2__ischecked\" type=\"checkbox\"/></td><td><label for=\"F_2.accountCheckbox:DataEntry\">36025 000123456 02 COMPTE CHEQUE EUROCOMPTE MME M TEST</label></td></tr>
+<tr><td><input id=\"F_2.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_3__ischecked\" type=\"checkbox\"/></td><td><label for=\"F_3.accountCheckbox:DataEntry\">36025 000123456 03 LIVRET BLEU EUROCOMPTE M T TEST</label></td></tr>
 </tbody>
 </table>
+</form>
 </body>
 </html>
             ");
+        $this->RESPONSE_DOWNLOAD_CSV = new Response(200, [], "Date;Date de valeur;Montant;Libellé;Solde
+02/04/2020;02/04/2020;1102.00;VIR DE M T TEST;2125.03
+08/04/2020;01/04/2020;-8.46;F COTIS EUROCOMPTE;2116.57
+09/04/2020;09/04/2020;-176.47;PAIEMENT CB 0704 CENTRE LECLERC CARTE 123456;1940.10");
     }
 
     private function scenario_get_auth_token_with_otp_transaction_validated(): TokenResult
@@ -228,7 +253,7 @@ var otpInMobileAppParameters = {
     private function scenario_get_auth_token_with_login_success(): TokenResult
     {
         $this->mockResponses->append(
-            $this->RESPONSE_LOGIN_SUCCESS,
+            $this->RESPONSE_LOGIN_SUCCESS_WITHOUT_DSP2_TOKEN,
             $this->RESPONSE_VALIDATION_TRANSACTION_STATE_PENDING
         );
 
@@ -277,11 +302,68 @@ var otpInMobileAppParameters = {
     private function scenario_list_accounts_with_login_success(): array
     {
         $this->mockResponses->append(
-            $this->RESPONSE_LOGIN_SUCCESS,
-            $this->RESPONSE_TELECHARGEMENT
+            $this->RESPONSE_LOGIN_SUCCESS_WITH_DSP2_TOKEN,
+            $this->RESPONSE_DOWNLOAD_PAGE
         );
 
         return $this->service->listAccounts([
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "auth_client_state" => "anAuthClientStateToken"
+        ]);
+    }
+
+    private function scenario_list_accounts_with_login_success_and_dsp2_token_expired_or_invalid(): array
+    {
+        $this->mockResponses->append(
+            $this->RESPONSE_LOGIN_SUCCESS_WITHOUT_DSP2_TOKEN,
+            $this->RESPONSE_DOWNLOAD_PAGE
+        );
+
+        return $this->service->listAccounts([
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "auth_client_state" => "anAuthClientStateToken"
+        ]);
+    }
+
+    private function scenario_fetch_transactions_with_login_failed(): array
+    {
+        $this->mockResponses->append(
+            $this->RESPONSE_LOGIN_FAILED
+        );
+
+        return $this->service->fetchTransactions("3602500012345602", [
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "auth_client_state" => "anAuthClientStateToken"
+        ]);
+    }
+
+    private function scenario_fetch_transactions_with_login_success_and_dsp2_token_expired_or_invalid(string $accountId = "3602500012345602"): array
+    {
+        $this->mockResponses->append(
+            $this->RESPONSE_LOGIN_SUCCESS_WITHOUT_DSP2_TOKEN,
+            $this->RESPONSE_DOWNLOAD_PAGE,
+            $this->RESPONSE_DOWNLOAD_CSV
+        );
+
+        return $this->service->fetchTransactions($accountId, [
+            "Login" => "myLogin",
+            "Password" => "myPassword",
+            "auth_client_state" => "anAuthClientStateToken"
+        ]);
+    }
+
+    private function scenario_fetch_transactions_with_login_success(string $accountId = "3602500012345602"): array
+    {
+        $this->mockResponses->append(
+            $this->RESPONSE_LOGIN_SUCCESS_WITH_DSP2_TOKEN,
+            $this->RESPONSE_DOWNLOAD_PAGE,
+            $this->RESPONSE_DOWNLOAD_CSV
+        );
+
+        return $this->service->fetchTransactions($accountId, [
             "Login" => "myLogin",
             "Password" => "myPassword",
             "auth_client_state" => "anAuthClientStateToken"
@@ -465,6 +547,19 @@ var otpInMobileAppParameters = {
     /**
      * @test
      */
+    public function listAccounts_should_throw_DSP2TokenExpiredOrInvalidException_if_dsp2_token_is_invalid_or_expired()
+    {
+        try {
+            $this->scenario_list_accounts_with_login_success_and_dsp2_token_expired_or_invalid();
+            $this->fail("DSP2TokenExpiredOrInvalidException is expected");
+        } catch (DSP2TokenExpiredOrInvalidException $e) {
+            $this->assertEquals(["Crédit Mutuel"], $e->messageFormatterArgs);
+        }
+    }
+
+    /**
+     * @test
+     */
     public function listAccounts_should_return_accounts_list_from_download_page()
     {
         $accounts = $this->scenario_list_accounts_with_login_success();
@@ -487,6 +582,90 @@ var otpInMobileAppParameters = {
         $this->assertEquals(3, sizeof($accounts));
         $this->assertEquals("3602500012345601", $accounts[0]->id);
         $this->assertEquals("COMPTE CHEQUE EUROCOMPTE M T TEST", $accounts[0]->name);
-        $this->assertNull($accounts[0]->balance);
+    }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_throw_AuthenticationException_if_login_failed()
+    {
+        try {
+            $this->scenario_fetch_transactions_with_login_failed();
+            $this->fail("AuthenticationException is expected");
+        } catch (AuthenticationException $e) {
+            $this->assertEquals(["Votre identifiant est inconnu ou votre mot de passe est faux. Veuillez réessayer en corrigeant votre saisie"], $e->messageFormatterArgs);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_throw_DSP2TokenExpiredOrInvalidException_if_dsp2_token_is_invalid_or_expired()
+    {
+        try {
+            $this->scenario_fetch_transactions_with_login_success_and_dsp2_token_expired_or_invalid();
+            $this->fail("DSP2TokenExpiredOrInvalidException is expected");
+        } catch (DSP2TokenExpiredOrInvalidException $e) {
+            $this->assertEquals(["Crédit Mutuel"], $e->messageFormatterArgs);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_throw_UnknownAccountIdException_if_accountId_is_unknown()
+    {
+        try {
+            $this->scenario_fetch_transactions_with_login_success("123456");
+            $this->fail("UnknownAccountIdException is expected");
+        } catch (UnknownAccountIdException $e) {
+            $this->assertEquals(["123456"], $e->messageFormatterArgs);
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_return_last_transactions_list_parsed_from_csv_downloaded_file()
+    {
+        $transactions = $this->scenario_fetch_transactions_with_login_success();
+
+        $request1 = $this->transactionsHistory[0]["request"];
+        $request2 = $this->transactionsHistory[1]["request"];
+        $request3 = $this->transactionsHistory[2]["request"];
+
+        // Authenticate first with dsp2 token
+        $this->assertEquals("POST", $request1->getMethod());
+        $this->assertEquals("https://www.creditmutuel.fr/fr/authentification.html", (string)$request1->getUri());
+        $this->assertEquals("application/x-www-form-urlencoded", $request1->getHeaderLine("Content-Type"));
+        $this->assertEquals("_cm_user=myLogin&_cm_pwd=myPassword&flag=password", (string)$request1->getBody());
+        $this->assertEquals("auth_client_state=anAuthClientStateToken", $request1->getHeaderLine("Cookie"));
+
+        // Then get download page
+        $this->assertEquals("GET", $request2->getMethod());
+        $this->assertEquals("https://www.creditmutuel.fr/fr/banque/compte/telechargement.cgi", (string)$request2->getUri());
+
+        // Then download csv transactions file
+        $this->assertEquals("POST", $request3->getMethod());
+        $this->assertEquals("https://www.creditmutuel.fr/fr/banque/compte/telechargement.cgi?withParameters=true", (string)$request3->getUri());
+        $this->assertEquals("data_formats_selected=csv&data_formats_options_csv_fileformat=2&data_formats_options_csv_dateformat=0&data_formats_options_csv_fieldseparator=0&data_formats_options_csv_amountcolnumber=0&data_formats_options_csv_decimalseparator=1&CB%3Adata_accounts_account_3__ischecked=on&_FID_DoDownload.x=0&_FID_DoValidate.y=0", (string)$request3->getBody());
+
+        $this->assertInstanceOf(Transaction::class, $transactions[0]);
+        $this->assertEquals(3, sizeof($transactions));
+
+        $this->assertEquals("VIR DE M T TEST", $transactions[0]->description);
+        $this->assertEquals(new DateTime("2020-04-02"), $transactions[0]->date);
+        $this->assertEquals("1102.00", $transactions[0]->amount);
+        $this->assertEquals("2125.03", $transactions[0]->accountBalance);
+
+        $this->assertEquals("F COTIS EUROCOMPTE", $transactions[1]->description);
+        $this->assertEquals(new DateTime("2020-04-08"), $transactions[1]->date);
+        $this->assertEquals("-8.46", $transactions[1]->amount);
+        $this->assertEquals("2116.57", $transactions[1]->accountBalance);
+
+        $this->assertEquals("PAIEMENT CB 0704 CENTRE LECLERC CARTE 123456", $transactions[2]->description);
+        $this->assertEquals(new DateTime("2020-04-09"), $transactions[2]->date);
+        $this->assertEquals("-176.47", $transactions[2]->amount);
+        $this->assertEquals("1940.10", $transactions[2]->accountBalance);
     }
 }
