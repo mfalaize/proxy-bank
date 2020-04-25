@@ -129,9 +129,9 @@ var otpInMobileAppParameters = {
 <form id=\"P:F\" action=\"/fr/banque/compte/telechargement.cgi?withParameters=true\">
 <table id=\"account-table\">
 <tbody>
-<tr><td><input id=\"F_0.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_ischecked\" type=\"checkbox\"/></td><td><label for=\"F_1.accountCheckbox:DataEntry\">36025 000123456 01 COMPTE CHEQUE EUROCOMPTE M T TEST</label></td></tr>
-<tr><td><input id=\"F_1.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_2__ischecked\" type=\"checkbox\"/></td><td><label for=\"F_2.accountCheckbox:DataEntry\">36025 000123456 02 COMPTE CHEQUE EUROCOMPTE MME M TEST</label></td></tr>
-<tr><td><input id=\"F_2.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_3__ischecked\" type=\"checkbox\"/></td><td><label for=\"F_3.accountCheckbox:DataEntry\">36025 000123456 03 LIVRET BLEU EUROCOMPTE M T TEST</label></td></tr>
+<tr><td><input id=\"F_0.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_ischecked\" type=\"checkbox\"/></td><td><label for=\"F_0.accountCheckbox:DataEntry\">36025 000123456 01 COMPTE CHEQUE EUROCOMPTE M T TEST</label></td></tr>
+<tr><td><input id=\"F_1.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_2__ischecked\" type=\"checkbox\"/></td><td><label for=\"F_1.accountCheckbox:DataEntry\">36025 000123456 02 COMPTE CHEQUE EUROCOMPTE MME M TEST</label></td></tr>
+<tr><td><input id=\"F_2.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_3__ischecked\" type=\"checkbox\"/></td><td><label for=\"F_2.accountCheckbox:DataEntry\">36025 000123456 03 LIVRET BLEU EUROCOMPTE M T TEST</label></td></tr>
 </tbody>
 </table>
 </form>
@@ -648,7 +648,7 @@ var otpInMobileAppParameters = {
         // Then download csv transactions file
         $this->assertEquals("POST", $request3->getMethod());
         $this->assertEquals("https://www.creditmutuel.fr/fr/banque/compte/telechargement.cgi?withParameters=true", (string)$request3->getUri());
-        $this->assertEquals("data_formats_selected=csv&data_formats_options_csv_fileformat=2&data_formats_options_csv_dateformat=0&data_formats_options_csv_fieldseparator=0&data_formats_options_csv_amountcolnumber=0&data_formats_options_csv_decimalseparator=1&CB%3Adata_accounts_account_3__ischecked=on&_FID_DoDownload.x=0&_FID_DoValidate.y=0", (string)$request3->getBody());
+        $this->assertEquals("data_formats_selected=csv&data_formats_options_csv_fileformat=2&data_formats_options_csv_dateformat=0&data_formats_options_csv_fieldseparator=0&data_formats_options_csv_amountcolnumber=0&data_formats_options_csv_decimalseparator=1&CB%3Adata_accounts_account_2__ischecked=on&_FID_DoDownload.x=0&_FID_DoValidate.y=0", (string)$request3->getBody());
 
         $this->assertInstanceOf(Transaction::class, $transactions[0]);
         $this->assertEquals(3, sizeof($transactions));

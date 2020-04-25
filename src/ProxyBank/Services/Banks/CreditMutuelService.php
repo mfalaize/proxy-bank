@@ -232,22 +232,13 @@ class CreditMutuelService implements BankServiceInterface
     public function listAccounts(array $inputs): array
     {
         $client = $this->processAuthentication($inputs);
+        $data = $this->extractDataFromDownloadPage($client);
 
-        $response = $client->get(self::DOWNLOAD_URL);
-
-        $html = new DOMDocument();
-        $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
-
-        $accountNodes = $html->getElementById('account-table')->getElementsByTagName('label');
         $accounts = [];
-        foreach ($accountNodes as $accountNode) {
-            $splitSpaces = preg_split('/ /', $accountNode->textContent, 4);
-            $accountId = join('', array_slice($splitSpaces, 0, 3));
-            $accountName = $splitSpaces[3];
-
+        foreach ($data["accounts"] as $accountData) {
             $account = new Account();
-            $account->id = $accountId;
-            $account->name = $accountName;
+            $account->id = $accountData["accountId"];
+            $account->name = $accountData["accountName"];
             $accounts[] = $account;
         }
 
@@ -257,24 +248,13 @@ class CreditMutuelService implements BankServiceInterface
     public function fetchTransactions(string $accountId, array $inputs): array
     {
         $client = $this->processAuthentication($inputs);
+        $data = $this->extractDataFromDownloadPage($client);
 
-        $response = $client->get(self::DOWNLOAD_URL);
-
-        $html = new DOMDocument();
-        $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
-
-        $downloadCsvUrl = $html->getElementById('P:F')->getAttribute('action');
-
-        $accountNodes = $html->getElementById('account-table')->getElementsByTagName('label');
         $accountCheckboxName = null;
 
-        foreach ($accountNodes as $accountNode) {
-            $splitSpaces = preg_split('/ /', $accountNode->textContent, 4);
-            $accountNodeId = join('', array_slice($splitSpaces, 0, 3));
-
-            if ($accountId == $accountNodeId) {
-                $accountCheckboxId = $accountNode->getAttribute("for");
-                $accountCheckboxName = $html->getElementById($accountCheckboxId)->getAttribute("name");
+        foreach ($data["accounts"] as $account) {
+            if ($accountId == $account["accountId"]) {
+                $accountCheckboxName = $account["accountCheckboxName"];
                 break;
             }
         }
@@ -283,7 +263,7 @@ class CreditMutuelService implements BankServiceInterface
             throw new UnknownAccountIdException($accountId);
         }
 
-        $response = $client->post($downloadCsvUrl, [
+        $response = $client->post($data["downloadCsvUrl"], [
             "form_params" => ([
                 "data_formats_selected" => "csv",
                 "data_formats_options_csv_fileformat" => self::CSV_FORMAT_EXCEL_XP,
@@ -298,6 +278,38 @@ class CreditMutuelService implements BankServiceInterface
         ]);
 
         return $this->convertCsvToTransactions((string)$response->getBody());
+    }
+
+    private function extractDataFromDownloadPage(Client $authenticatedClient): array
+    {
+        $response = $authenticatedClient->get(self::DOWNLOAD_URL);
+
+        $html = new DOMDocument();
+        $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
+
+        $downloadCsvUrl = $html->getElementById('P:F')->getAttribute('action');
+
+        $accountNodes = $html->getElementById('account-table')->getElementsByTagName('label');
+        $accountCheckboxName = null;
+        $accounts = [];
+
+        foreach ($accountNodes as $accountNode) {
+            $splitSpaces = preg_split('/ /', $accountNode->textContent, 4);
+            $accountId = join('', array_slice($splitSpaces, 0, 3));
+            $accountName = $splitSpaces[3];
+            $accountCheckboxId = $accountNode->getAttribute("for");
+            $accountCheckboxName = $html->getElementById($accountCheckboxId)->getAttribute("name");
+            $accounts[] = [
+                "accountId" => $accountId,
+                "accountName" => $accountName,
+                "accountCheckboxName" => $accountCheckboxName
+            ];
+        }
+
+        return [
+            "downloadCsvUrl" => $downloadCsvUrl,
+            "accounts" => $accounts
+        ];
     }
 
     private function convertCsvToTransactions(string $csv): array
