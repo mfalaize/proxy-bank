@@ -66,6 +66,12 @@ class BankService
         return $this->getBankImplementation($bankId)->listAccounts($inputs);
     }
 
+    public function fetchTransactions(string $bankId, string $accountId, string $token): array
+    {
+        $inputs = $this->decryptInputsFromToken($token);
+        return $this->getBankImplementation($bankId)->fetchTransactions($accountId, $inputs);
+    }
+
     private function getBankImplementation(string $bankId): BankServiceInterface
     {
         try {

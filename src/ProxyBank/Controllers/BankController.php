@@ -5,6 +5,7 @@ namespace ProxyBank\Controllers;
 
 
 use ProxyBank\Exceptions\EmptyParsedBodyException;
+use ProxyBank\Exceptions\RequiredValueException;
 use ProxyBank\Services\BankService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -55,6 +56,26 @@ class BankController
         }
 
         $accounts = $this->bankService->listAccounts($args["bankId"], $params["token"]);
+
+        $response->getBody()->write(json_encode($accounts));
+        return $response->withHeader("Content-Type", "application/json");
+    }
+
+    public function fetchTransactions(Request $request, Response $response, array $args)
+    {
+        $params = $request->getParsedBody();
+
+        $token = null;
+
+        if (empty($params) || empty($params["token"])) {
+            throw new EmptyParsedBodyException();
+        }
+
+        if (empty($params["accountId"])) {
+            throw new RequiredValueException("accountId");
+        }
+
+        $accounts = $this->bankService->fetchTransactions($args["bankId"], $params["accountId"], $params["token"]);
 
         $response->getBody()->write(json_encode($accounts));
         return $response->withHeader("Content-Type", "application/json");

@@ -32,9 +32,10 @@ class Transaction implements JsonSerializable
     public function jsonSerialize()
     {
         return [
-            'date' => $this->date,
+            'date' => $this->date->format("Y-m-d"),
             'description' => $this->description,
-            'amount' => $this->amount
+            'amount' => $this->amount,
+            'accountBalance' => $this->accountBalance
         ];
     }
 }

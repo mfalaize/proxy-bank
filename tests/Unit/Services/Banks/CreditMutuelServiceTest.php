@@ -139,9 +139,9 @@ var otpInMobileAppParameters = {
 </html>
             ");
         $this->RESPONSE_DOWNLOAD_CSV = new Response(200, [], "Date;Date de valeur;Montant;Libellé;Solde
-02/04/2020;02/04/2020;1102.00;VIR DE M T TEST;2125.03
-08/04/2020;01/04/2020;-8.46;F COTIS EUROCOMPTE;2116.57
-09/04/2020;09/04/2020;-176.47;PAIEMENT CB 0704 CENTRE LECLERC CARTE 123456;1940.10");
+02/04/2020;02/04/2020;1102.00;VIR DE M T TEST;2125.03\r
+08/04/2020;01/04/2020;-8.46;F COTIS EUROCOMPTE;2116.57\r
+09/04/2020;09/04/2020;-176.47;PAIEMENT CB 0704 CENTRE LECLERC CARTE 123456;1940.10\r");
     }
 
     private function scenario_get_auth_token_with_otp_transaction_validated(): TokenResult

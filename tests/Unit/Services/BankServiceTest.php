@@ -209,6 +209,71 @@ class BankServiceTest extends TestCase
             $this->assertEquals(["null"], $e->messageFormatterArgs);
         }
     }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_decrypt_token_and_decode_json_then_return_bank_implementation_fetchTransaction()
+    {
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn('{"test":"ok"}');
+
+        $mock = $this->createMock(BankServiceInterface::class);
+        $mock->expects($this->atLeastOnce())
+            ->method("fetchTransactions")
+            ->with("accountId", ["test" => "ok"])
+            ->willReturn(["ok"]);
+
+        $this->container->expects($this->atLeastOnce())
+            ->method("get")
+            ->willReturn($mock);
+
+        $accounts = $this->service->fetchTransactions("credit-mutuel", "accountId", "encryptedToken");
+
+        $this->assertEquals(["ok"], $accounts);
+    }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_throw_InvalidTokenException_if_token_cant_be_decrypted()
+    {
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn(""); // empty string means that decryption has failed
+
+        try {
+            $this->service->fetchTransactions("credit-mutuel", "accountId", "encryptedToken");
+            $this->fail("InvalidTokenException is expected");
+        } catch (InvalidTokenException $e) {
+        }
+    }
+
+    /**
+     * @test
+     */
+    public function fetchTransactions_should_throw_UnknownBankIdException_if_no_bank_implementation_for_bankId()
+    {
+        $this->container->expects($this->atLeastOnce())
+            ->method("get")
+            ->with("null")
+            ->willThrowException(new NotFoundException());
+
+        $this->cryptoService->expects($this->atLeastOnce())
+            ->method("decrypt")
+            ->with("encryptedToken")
+            ->willReturn('{"test":"ok"}');
+
+        try {
+            $this->service->fetchTransactions("null", "accountId", "encryptedToken");
+            $this->fail("UnknownBankIdException is expected");
+        } catch (UnknownBankIdException $e) {
+            $this->assertEquals(["null"], $e->messageFormatterArgs);
+        }
+    }
 }
 
 class TestCreditMutuel

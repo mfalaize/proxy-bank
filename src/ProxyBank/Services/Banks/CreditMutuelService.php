@@ -328,7 +328,7 @@ class CreditMutuelService implements BankServiceInterface
             $transaction->date = DateTime::createFromFormat('d/m/Y H:i:s', $fields[0] . '00:00:00');
             $transaction->description = $fields[3];
             $transaction->amount = $fields[2];
-            $transaction->accountBalance = $fields[4];
+            $transaction->accountBalance = trim($fields[4]);
             $transactions[] = $transaction;
 
             $line = strtok($lineSeparator);

@@ -11,6 +11,7 @@ $app->group("/bank", function (RouteCollectorProxy $group) {
 
         $group->group("/account", function (RouteCollectorProxy $group) {
             $group->post("/list", BankController::class . ":listAccounts");
+            $group->post("/lastTransactions", BankController::class . ":fetchTransactions");
         });
     });
 });
