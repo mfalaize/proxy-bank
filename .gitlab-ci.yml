@@ -9,15 +9,11 @@ before_script:
   - apt-get update -yqq
   - apt-get install git libicu-dev -yqq
 
-  # Install xdebug (for phpunit coverage) and intl
-  - pecl install xdebug && docker-php-ext-enable xdebug
+  # Install intl
   - docker-php-ext-install intl
 
   # Install composer
-  - curl -sS https://getcomposer.org/installer | php
-
-  # Install all project dependencies
-  - php composer.phar install
+  - ./composer-install.sh
 
   # Generate *.res resource bundle files
   - genrb --verbose --destdir locale/ --encoding utf-8 locale/*.txt
@@ -29,11 +25,15 @@ stages:
 test:
   stage: test
   script:
+    # Install xdebug (for phpunit coverage)
+    - pecl install xdebug && docker-php-ext-enable xdebug
+    - php composer.phar install
     - vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --coverage-text
 
 deploy:
   stage: deploy
   script:
+    - php composer.phar install --no-ansi --no-dev --no-interaction --no-plugins --no-progress --no-scripts --no-suggest --optimize-autoloader
     - apt-get install lftp -yqq
     - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rev ./ ./proxy-bank/ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/"
   only:
