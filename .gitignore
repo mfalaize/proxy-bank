@@ -5,5 +5,4 @@ locale/*.res
 src/secret.php
 *.iml
 .phpunit.result.cache
-composer.lock
 composer.phar
