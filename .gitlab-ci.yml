@@ -5,9 +5,9 @@ cache:
     - vendor/
 
 before_script:
-  # Install git and libicu-dev (for intl), the php image doesn't have installed
+  # Install git and libicu-dev (for intl) and wget (for composer-install.sh script), the php image doesn't have installed
   - apt-get update -yqq
-  - apt-get install git libicu-dev -yqq
+  - apt-get install git libicu-dev wget -yqq
 
   # Install intl
   - docker-php-ext-install intl
