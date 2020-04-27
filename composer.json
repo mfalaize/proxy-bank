@@ -12,7 +12,9 @@
     "ext-json": "*",
     "ext-libxml": "*",
     "ext-curl": "*",
-    "ext-intl": "*"
+    "ext-intl": "*",
+    "zircote/swagger-php": "^3.0",
+    "slim/php-view": "^2.2"
   },
   "autoload": {
     "psr-0": {"Requests": "library/"},

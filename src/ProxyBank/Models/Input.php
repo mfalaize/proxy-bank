@@ -6,17 +6,22 @@ namespace ProxyBank\Models;
 
 use JsonSerializable;
 
+/**
+ * @OA\Schema()
+ */
 class Input implements JsonSerializable
 {
     const TYPE_TEXT = "text";
     const TYPE_PASSWORD = "password";
 
     /**
-     * @var string
+     * @OA\Property()
+     * @var string The input name which is both the input ID AND the label (can be displayed as is)
      */
     public $name;
 
     /**
+     * @OA\Property(enum={"text", "password"})
      * @var string
      */
     public $type;

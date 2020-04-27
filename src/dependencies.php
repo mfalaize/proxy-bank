@@ -10,6 +10,7 @@ use ProxyBank\Services\CryptoService;
 use ProxyBank\Services\IntlService;
 use Psr\Log\LoggerInterface;
 use Slim\Factory\AppFactory;
+use Slim\Views\PhpRenderer;
 use function DI\autowire;
 use function DI\create;
 
@@ -27,6 +28,8 @@ $builder->addDefinitions([
 
     // Bank implementation services
     CreditMutuelService::getBank()->id => autowire(CreditMutuelService::class),
+    PhpRenderer::class => autowire(PhpRenderer::class)
+        ->constructor(__DIR__ . "/../templates/")
 ]);
 
 AppFactory::setContainer($builder->build());

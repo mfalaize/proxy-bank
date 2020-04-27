@@ -6,20 +6,28 @@ namespace ProxyBank\Models;
 
 use JsonSerializable;
 
+/**
+ * @OA\Schema()
+ */
 class Bank implements JsonSerializable
 {
     /**
-     * @var string a unique id for the bank which will not be modified
+     * @OA\Property()
+     * @var string a unique id for the bank which is used as URL path variable to access bank specific services
      */
     public $id;
 
     /**
+     * @OA\Property()
      * @var string
      */
     public $name;
 
     /**
-     * @var array Inputs for authentication
+     * @OA\Property(
+     *     @OA\Items(ref="#/components/schemas/Input")
+     * )
+     * @var array Inputs required for authentication
      */
     public $authInputs;
 

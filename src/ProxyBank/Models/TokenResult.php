@@ -6,23 +6,26 @@ namespace ProxyBank\Models;
 
 use JsonSerializable;
 
+/**
+ * @OA\Schema()
+ */
 class TokenResult implements JsonSerializable
 {
     /**
-     * The token is an encrypted json
-     * @var string
+     * @OA\Property()
+     * @var string server-side encrypted token which contains authentication information
      */
     public $token;
 
     /**
-     * True if the encrypted token contains enough data to authenticate against bank server.
-     * False if it is incomplete (i.e. need a second factor authentication)
-     * @var boolean
+     * @OA\Property()
+     * @var boolean True if the encrypted token contains enough data to authenticate against bank server. False if it is incomplete (i.e. need a second factor authentication)
      */
     public $completedToken;
 
     /**
-     * @var string
+     * @OA\Property()
+     * @var string indicates what you need to do if the token is not complete
      */
     public $message;
 
