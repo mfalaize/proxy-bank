@@ -28,9 +28,13 @@ class OpenApiController
     {
         $serverUrl = $request->getUri()->getScheme() .
             "://" .
-            $request->getUri()->getHost() .
-            ":" .
-            $request->getUri()->getPort();
+            $request->getUri()->getHost();
+
+        if (!empty($request->getUri()->getPort())) {
+            $serverUrl .= ":" .
+                $request->getUri()->getPort();
+        }
+
         return $this->view->render($response, "swagger.php", [
             "swaggerUrl" => $serverUrl . "/swagger"
         ]);
