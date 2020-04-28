@@ -4,12 +4,12 @@
 namespace ProxyBank\Exceptions;
 
 
-use Slim\Exception\HttpBadRequestException;
+use Slim\Exception\HttpNotFoundException;
 
 class UnknownBankIdException extends ProxyBankException
 {
     public function __construct(string $bankId)
     {
-        parent::__construct(HttpBadRequestException::class, [$bankId]);
+        parent::__construct(HttpNotFoundException::class, [$bankId]);
     }
 }

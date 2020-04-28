@@ -94,7 +94,7 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
             ->withBody(stream_for(json_encode(["test" => "ok"])))
         );
 
-        $this->assertEquals(400, $response->getStatusCode());
+        $this->assertEquals(404, $response->getStatusCode());
         $this->assertEquals('application/json', $response->getHeaderLine("Content-Type"));
         $this->assertJsonStringEqualsJsonString('{"message":"Unknown null bankId"}', (string)$response->getBody());
     }

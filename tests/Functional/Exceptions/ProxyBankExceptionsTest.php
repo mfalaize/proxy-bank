@@ -93,7 +93,7 @@ class ProxyBankExceptionsTest extends FunctionalTestCase
     /**
      * @test
      */
-    public function UnknownBankIdException_should_return_400()
+    public function UnknownBankIdException_should_return_404()
     {
         $this->bankService->expects($this->atLeastOnce())
             ->method("listAvailableBanks")
@@ -101,14 +101,14 @@ class ProxyBankExceptionsTest extends FunctionalTestCase
 
         $response = $this->app->handle($this->request);
 
-        $this->assertEquals(400, $response->getStatusCode());
+        $this->assertEquals(404, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString('{"message":"Unknown MyBankId bankId"}', (string)$response->getBody());
     }
 
     /**
      * @test
      */
-    public function UnknownAccountId_should_return_400()
+    public function UnknownAccountId_should_return_404()
     {
         $this->bankService->expects($this->atLeastOnce())
             ->method("listAvailableBanks")
@@ -116,7 +116,7 @@ class ProxyBankExceptionsTest extends FunctionalTestCase
 
         $response = $this->app->handle($this->request);
 
-        $this->assertEquals(400, $response->getStatusCode());
+        $this->assertEquals(404, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString('{"message":"Unknown 0123456 accountId"}', (string)$response->getBody());
     }
 
