@@ -1,23 +1,26 @@
 {
   "require": {
     "php": ">=7.2",
-    "slim/slim": "4.*",
-    "slim/psr7": "^1.0",
-    "php-di/slim-bridge": "^3.0",
-    "doctrine/annotations": "^1.10",
-    "monolog/monolog": "^2.0",
-    "guzzlehttp/guzzle": "^6.5",
     "ext-dom": "*",
     "ext-openssl": "*",
     "ext-json": "*",
     "ext-libxml": "*",
     "ext-curl": "*",
     "ext-intl": "*",
+    "slim/slim": "4.*",
+    "slim/psr7": "^1.0",
+    "php-di/slim-bridge": "^3.0",
+    "doctrine/annotations": "^1.10",
+    "monolog/monolog": "^2.0",
+    "guzzlehttp/guzzle": "^6.5",
     "zircote/swagger-php": "^3.0",
-    "slim/php-view": "^2.2"
+    "slim/php-view": "^2.2",
+    "swagger-api/swagger-ui": "^3.25"
   },
   "autoload": {
-    "psr-0": {"Requests": "library/"},
+    "psr-0": {
+      "Requests": "library/"
+    },
     "psr-4": {
       "ProxyBank\\": "src/ProxyBank"
     }
@@ -30,5 +33,17 @@
     "psr-4": {
       "Tests\\": "tests/"
     }
+  },
+  "scripts": {
+    "test": [
+      "@composer install",
+      "vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --coverage-text"
+    ],
+    "post-autoload-dump": [
+      "ProxyBank\\Composer::copySwaggerUIAssets"
+    ]
+  },
+  "scripts-descriptions": {
+    "test": "Run all tests!"
   }
 }

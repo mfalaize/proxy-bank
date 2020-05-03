@@ -27,8 +27,7 @@ test:
   script:
     # Install xdebug (for phpunit coverage)
     - pecl install xdebug && docker-php-ext-enable xdebug
-    - php composer.phar install
-    - vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --coverage-text
+    - php composer.phar test
 
 deploy:
   stage: deploy

@@ -36,7 +36,7 @@ class OpenApiController
         }
 
         return $this->view->render($response, "swagger.php", [
-            "swaggerUrl" => $serverUrl . "/swagger"
+            "swaggerUrl" => $serverUrl . "/swagger.json"
         ]);
     }
 }

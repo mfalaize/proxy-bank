@@ -1,6 +1,7 @@
 .idea/
 vendor/
 public/tests/
+assets/
 locale/*.res
 src/secret.php
 *.iml
