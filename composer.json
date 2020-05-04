@@ -39,7 +39,10 @@
       "@composer install",
       "vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --coverage-text"
     ],
-    "post-autoload-dump": [
+    "post-install-cmd": [
+      "ProxyBank\\Composer::copySwaggerUIAssets"
+    ],
+    "post-update-cmd": [
       "ProxyBank\\Composer::copySwaggerUIAssets"
     ]
   },
