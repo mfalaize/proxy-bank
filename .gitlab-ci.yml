@@ -32,7 +32,7 @@ test:
 deploy:
   stage: deploy
   script:
-    - php composer.phar install --no-ansi --no-dev --no-interaction --no-plugins --no-progress --no-scripts --no-suggest --optimize-autoloader
+    - php composer.phar install --no-ansi --no-dev --no-interaction --no-plugins --no-progress --no-suggest --optimize-autoloader
     - apt-get install lftp -yqq
     - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rev ./ ./proxy-bank/ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/"
   only:
