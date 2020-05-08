@@ -22,6 +22,7 @@ use ProxyBank\Models\Transaction;
 use ProxyBank\Services\BankServiceInterface;
 use ProxyBank\Services\CryptoService;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class CreditMutuelService implements BankServiceInterface
 {
@@ -51,10 +52,13 @@ class CreditMutuelService implements BankServiceInterface
 
     private $cryptoService;
 
-    public function __construct(CryptoService $cryptoService)
+    private $logger;
+
+    public function __construct(CryptoService $cryptoService, LoggerInterface $logger)
     {
         $this->handlerStack = HandlerStack::create();
         $this->cryptoService = $cryptoService;
+        $this->logger = $logger;
     }
 
     public static function getBank(): Bank
@@ -84,7 +88,7 @@ class CreditMutuelService implements BankServiceInterface
         }
 
         $client = $this->processAuthentication($inputs);
-        return $this->processLoginSuccess($client, $inputs);
+        return $this->getAuthTokenWithLoginSuccess($client, $inputs);
     }
 
     private function processAuthentication(array $inputs): Client
@@ -93,6 +97,7 @@ class CreditMutuelService implements BankServiceInterface
         $hasDSP2Token = isset($inputs[self::DSP2_TOKEN_INPUT]);
 
         if ($hasDSP2Token) {
+            $this->logger->debug("Adding DSP2 token to cookies");
             $client->getConfig("cookies")->setCookie(new SetCookie([
                 "Domain" => self::DOMAIN,
                 "Name" => self::DSP2_TOKEN_INPUT,
@@ -100,6 +105,7 @@ class CreditMutuelService implements BankServiceInterface
             ]));
         }
 
+        $this->logger->debug("Authentication: POST request to " . self::AUTH_URL);
         $response = $client->post(self::AUTH_URL, [
             "form_params" => ([
                 "_cm_user" => $inputs[self::LOGIN_INPUT],
@@ -114,6 +120,8 @@ class CreditMutuelService implements BankServiceInterface
             throw new DSP2TokenExpiredOrInvalidException(self::getBank()->name);
         }
 
+        $this->logger->debug("Authentication success");
+
         return $client;
     }
 
@@ -121,9 +129,11 @@ class CreditMutuelService implements BankServiceInterface
     {
         $client = $this->buildClientHttp();
         foreach ($inputs[self::COOKIES_INPUT] as $cookie) {
+            $this->logger->debug("Setting cookie {cookie} from decrypted token", ["cookie" => $cookie["Name"]]);
             $client->getConfig("cookies")->setCookie(new SetCookie($cookie));
         }
 
+        $this->logger->debug("Verify auth factor state: POST request to " . self::OTP_TRANSACTION_STATE_URL);
         $response = $client->post(self::OTP_TRANSACTION_STATE_URL, [
             "form_params" => ([
                 "transactionId" => $inputs[self::TRANSACTION_ID_INPUT]
@@ -140,6 +150,7 @@ class CreditMutuelService implements BankServiceInterface
         } else if ($status == "CANCELLED") {
             $token->message = "La transaction a été annulée";
         } else if ($status == "VALIDATED") {
+            $this->logger->debug("Auth factor state is validated: POST request to " . self::VALIDATION_URL);
             // This call to the validation URL fills out the client cookie jar with the valid dsp2 token
             $client->post($inputs[self::VALIDATION_URL_INPUT], [
                 "form_params" => ([
@@ -149,6 +160,7 @@ class CreditMutuelService implements BankServiceInterface
                 ])
             ]);
 
+            $this->logger->debug("Retrieve DSP2 cookie");
             $dsp2Token = $client->getConfig("cookies")->getCookieByName("auth_client_state")->getValue();
 
             $tokenJson = json_encode([
@@ -163,8 +175,9 @@ class CreditMutuelService implements BankServiceInterface
         return $token;
     }
 
-    private function processLoginSuccess(Client $client, array $inputs): TokenResult
+    private function getAuthTokenWithLoginSuccess(Client $client, array $inputs): TokenResult
     {
+        $this->logger->debug("Validation: GET request to " . self::VALIDATION_URL);
         $response = $client->get(self::VALIDATION_URL);
         $htmlString = (string)$response->getBody();
 
@@ -199,11 +212,16 @@ class CreditMutuelService implements BankServiceInterface
         $token->token = $this->cryptoService->encrypt($tokenJson);
         $token->completedToken = false;
         $token->message = $message;
+
+        $this->logger->debug("Validation: Generate incomplete token which needs additional auth factor");
+
         return $token;
     }
 
     private function processLoginFailed(ResponseInterface $response)
     {
+        $this->logger->debug("Authentication failed. Attempting to retrieve error message");
+
         $html = new DOMDocument();
         $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
         $identDivs = $html->getElementById("ident")->getElementsByTagName("div");
@@ -232,7 +250,7 @@ class CreditMutuelService implements BankServiceInterface
     public function listAccounts(array $inputs): array
     {
         $client = $this->processAuthentication($inputs);
-        $data = $this->extractDataFromDownloadPage($client);
+        $data = $this->extractAccountsFromDownloadPage($client);
 
         $accounts = [];
         foreach ($data["accounts"] as $accountData) {
@@ -248,7 +266,7 @@ class CreditMutuelService implements BankServiceInterface
     public function fetchTransactions(string $accountId, array $inputs): array
     {
         $client = $this->processAuthentication($inputs);
-        $data = $this->extractDataFromDownloadPage($client);
+        $data = $this->extractAccountsFromDownloadPage($client);
 
         $accountCheckboxName = null;
 
@@ -263,6 +281,7 @@ class CreditMutuelService implements BankServiceInterface
             throw new UnknownAccountIdException($accountId);
         }
 
+        $this->logger->debug("Download CSV to fetch transactions: POST request to " . $data["downloadCsvUrl"]);
         $response = $client->post($data["downloadCsvUrl"], [
             "form_params" => ([
                 "data_formats_selected" => "csv",
@@ -280,8 +299,9 @@ class CreditMutuelService implements BankServiceInterface
         return $this->convertCsvToTransactions((string)$response->getBody());
     }
 
-    private function extractDataFromDownloadPage(Client $authenticatedClient): array
+    private function extractAccountsFromDownloadPage(Client $authenticatedClient): array
     {
+        $this->logger->debug("List accounts: GET request to " . self::DOWNLOAD_URL);
         $response = $authenticatedClient->get(self::DOWNLOAD_URL);
 
         $html = new DOMDocument();
@@ -333,6 +353,8 @@ class CreditMutuelService implements BankServiceInterface
 
             $line = strtok($lineSeparator);
         }
+
+        $this->logger->debug("Retrieving " . sizeof($transactions) . " transactions");
 
         return $transactions;
     }

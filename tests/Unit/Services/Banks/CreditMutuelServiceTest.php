@@ -20,6 +20,7 @@ use ProxyBank\Models\TokenResult;
 use ProxyBank\Models\Transaction;
 use ProxyBank\Services\Banks\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
+use Psr\Log\LoggerInterface;
 
 class CreditMutuelServiceTest extends TestCase
 {
@@ -76,7 +77,10 @@ class CreditMutuelServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->cryptoService = $this->createMock(CryptoService::class);
-        $this->service = new CreditMutuelService($this->cryptoService);
+        $this->service = new CreditMutuelService(
+            $this->cryptoService,
+            $this->createMock(LoggerInterface::class)
+        );
 
         $this->mockResponses = new MockHandler();
         $this->service->handlerStack = HandlerStack::create($this->mockResponses);

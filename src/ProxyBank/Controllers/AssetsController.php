@@ -19,11 +19,13 @@ class AssetsController
             "png" => "image/png"
         ];
 
+        $assetPath = $args["path"] . "." . $args["type"];
+
         if (!array_key_exists($args["type"], $acceptedContentTypes)) {
-            throw new HttpForbiddenException($request);
+            throw new HttpForbiddenException($request, "Illegal attempt to access asset file " . $assetPath);
         }
 
-        $file = __DIR__ . "/../../../assets/" . $args["path"] . "." . $args["type"];
+        $file = __DIR__ . "/../../../assets/" . $assetPath;
 
         if (file_exists($file)) {
             $handle = fopen($file, "r");

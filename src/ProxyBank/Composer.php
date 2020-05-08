@@ -25,7 +25,12 @@ class Composer
         ];
 
         foreach ($filesToCopy as $file) {
-            copy($vendorDir . "/" . $file, $assetsDir . "/" . $file);
+            $sourceFile = $vendorDir . "/" . $file;
+            $destFile = $assetsDir . "/" . $file;
+
+            print "Copy " . $sourceFile . " to " . $destFile . "\n";
+
+            copy($sourceFile, $destFile);
         }
     }
 }
