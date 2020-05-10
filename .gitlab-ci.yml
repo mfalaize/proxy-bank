@@ -33,7 +33,7 @@ deploy:
   script:
     - php composer.phar release
     - apt-get install lftp -yqq
-    - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; ..mirror -Rev ./ ./proxy-bank/ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/ --exclude target/ --exclude composer.phar --exclude phpDocumentor.phar"
+    - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rev ./ ./proxy-bank/ --ignore-time --no-symlinks --parallel=10 --exclude-glob .git* --exclude .git/ --exclude target/ --exclude composer.phar --exclude phpDocumentor.phar"
   environment:
     name: production
   when: manual
