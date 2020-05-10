@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Tests\Unit\Services\Banks;
+namespace Tests\Unit\Services\Banks\France;
 
 
 use DateTime;
@@ -18,7 +18,7 @@ use ProxyBank\Models\Account;
 use ProxyBank\Models\Input;
 use ProxyBank\Models\TokenResult;
 use ProxyBank\Models\Transaction;
-use ProxyBank\Services\Banks\CreditMutuelService;
+use ProxyBank\Services\Banks\France\CreditMutuelService;
 use ProxyBank\Services\CryptoService;
 use Psr\Log\LoggerInterface;
 

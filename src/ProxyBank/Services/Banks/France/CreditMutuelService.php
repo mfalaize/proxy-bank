@@ -1,7 +1,7 @@
 <?php
 
 
-namespace ProxyBank\Services\Banks;
+namespace ProxyBank\Services\Banks\France;
 
 
 use DateTime;
@@ -24,36 +24,113 @@ use ProxyBank\Services\CryptoService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ *
+ * Implementation for Crédit Mutuel.
+ *
+ * This service implements the API with web scraping method (because existing API is for Crédit Mutuel internal use only
+ * and is not documented).
+ *
+ * Therefore don't worry if you see connection logs on your Crédit Mutuel web interface. :-)
+ *
+ * @package ProxyBank\Services\Banks\France
+ * @link https://www.creditmutuel.fr
+ */
 class CreditMutuelService implements BankServiceInterface
 {
 
+    /**
+     * @internal
+     */
     const LOGIN_INPUT = "Login";
+    /**
+     * @internal
+     */
     const PASSWORD_INPUT = "Password";
+    /**
+     * @internal
+     */
     const TRANSACTION_ID_INPUT = "transactionId";
+    /**
+     * @internal
+     */
     const VALIDATION_URL_INPUT = "validationUrl";
+    /**
+     * @internal
+     */
     const OTP_HIDDEN_INPUT = "otp_hidden";
+    /**
+     * @internal
+     */
     const COOKIES_INPUT = "cookies";
+    /**
+     * @internal
+     */
     const DSP2_TOKEN_INPUT = "auth_client_state";
 
+    /**
+     * @internal
+     */
     const DOMAIN = "www.creditmutuel.fr";
+    /**
+     * @internal
+     */
     const BASE_URL = 'https://' . self::DOMAIN;
+    /**
+     * @internal
+     */
     const AUTH_URL = '/fr/authentification.html';
+    /**
+     * @internal
+     */
     const VALIDATION_URL = '/fr/banque/validation.aspx';
+    /**
+     * @internal
+     */
     const OTP_TRANSACTION_STATE_URL = "/fr/banque/async/otp/SOSD_OTP_GetTransactionState.htm";
+    /**
+     * @internal
+     */
     const DOWNLOAD_URL = "/fr/banque/compte/telechargement.cgi";
 
+    /**
+     * @internal
+     */
     const CSV_FORMAT_EXCEL_XP = 2;
+    /**
+     * @internal
+     */
     const CSV_DATE_FRENCH_FORMAT = 0;
+    /**
+     * @internal
+     */
     const CSV_FIELD_SEPARATOR_SEMICOLON = 0;
+    /**
+     * @internal
+     */
     const CSV_DECIMAL_SEPARATOR_DOT = 1;
+    /**
+     * @internal
+     */
     const CSV_ONE_COLUMN_PER_AMOUNT = 0;
 
+    /**
+     * @internal
+     */
     public $handlerStack;
 
+    /**
+     * @internal
+     */
     private $cryptoService;
-
+    /**
+     * @internal
+     */
     private $logger;
 
+    /**
+     * @internal
+     */
     public function __construct(CryptoService $cryptoService, LoggerInterface $logger)
     {
         $this->handlerStack = HandlerStack::create();
@@ -61,6 +138,15 @@ class CreditMutuelService implements BankServiceInterface
         $this->logger = $logger;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Bank ID: credit-mutuel
+     *
+     * Authentication inputs required: Login and Password
+     *
+     * @return Bank
+     */
     public static function getBank(): Bank
     {
         $bank = new Bank();
@@ -73,6 +159,28 @@ class CreditMutuelService implements BankServiceInterface
         return $bank;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * ### First step
+     *
+     * First call with Login and Password as authentication inputs. We log in against the website authentication page.
+     * Then Crédit Mutuel needs your smartphone validation (in the Crédit Mutuel application) so we return immediately
+     * a {@link TokenResult} with a {@link TokenResult::$token}, {@link TokenResult::$completedToken} to false and a
+     * {@link TokenResult::$message} to indicates that we need your validation.
+     *
+     * ### Second step
+     *
+     * You have validated your authentication on your smartphone. You call again this method with the previously generated
+     * {@link TokenResult::$token} which contains cookies, your login/password and information about the validation transaction.
+     * Now we can generate the auth_client_state cookie, which is the DSP2 cookie valid for 90 days. We generate a new
+     * {@link TokenResult::$token} with the auth_client_state cookie and login/password and now we have the complete token.
+     *
+     * @param array $inputs
+     * @return TokenResult
+     * @throws DSP2TokenExpiredOrInvalidException
+     * @throws RequiredValueException
+     */
     public function getAuthToken(array $inputs): TokenResult
     {
         if (!isset($inputs[self::LOGIN_INPUT])) {
@@ -91,6 +199,9 @@ class CreditMutuelService implements BankServiceInterface
         return $this->getAuthTokenWithLoginSuccess($client, $inputs);
     }
 
+    /**
+     * @internal
+     */
     private function processAuthentication(array $inputs): Client
     {
         $client = $this->buildClientHttp();
@@ -125,6 +236,9 @@ class CreditMutuelService implements BankServiceInterface
         return $client;
     }
 
+    /**
+     * @internal
+     */
     private function processTransactionState(array $inputs): TokenResult
     {
         $client = $this->buildClientHttp();
@@ -175,6 +289,9 @@ class CreditMutuelService implements BankServiceInterface
         return $token;
     }
 
+    /**
+     * @internal
+     */
     private function getAuthTokenWithLoginSuccess(Client $client, array $inputs): TokenResult
     {
         $this->logger->debug("Validation: GET request to " . self::VALIDATION_URL);
@@ -218,6 +335,9 @@ class CreditMutuelService implements BankServiceInterface
         return $token;
     }
 
+    /**
+     * @internal
+     */
     private function processLoginFailed(ResponseInterface $response)
     {
         $this->logger->debug("Authentication failed. Attempting to retrieve error message");
@@ -237,6 +357,9 @@ class CreditMutuelService implements BankServiceInterface
         throw new AuthenticationException($errorMessage);
     }
 
+    /**
+     * @internal
+     */
     private function buildClientHttp()
     {
         return new Client([
@@ -247,6 +370,15 @@ class CreditMutuelService implements BankServiceInterface
         ]);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * For this, we go to the Download page of your customer area and parse HTML to list available accounts.
+     *
+     * @param array $inputs
+     * @return array
+     * @throws DSP2TokenExpiredOrInvalidException
+     */
     public function listAccounts(array $inputs): array
     {
         $client = $this->processAuthentication($inputs);
@@ -263,6 +395,18 @@ class CreditMutuelService implements BankServiceInterface
         return $accounts;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * For this, we go to the Download page of your customer area and generate CSV file for the chosen account.
+     * Then we parse the CSV and convert it to a {@link Transaction} list.
+     *
+     * @param string $accountId
+     * @param array $inputs
+     * @return array
+     * @throws DSP2TokenExpiredOrInvalidException
+     * @throws UnknownAccountIdException
+     */
     public function fetchTransactions(string $accountId, array $inputs): array
     {
         $client = $this->processAuthentication($inputs);
@@ -299,6 +443,9 @@ class CreditMutuelService implements BankServiceInterface
         return $this->convertCsvToTransactions((string)$response->getBody());
     }
 
+    /**
+     * @internal
+     */
     private function extractAccountsFromDownloadPage(Client $authenticatedClient): array
     {
         $this->logger->debug("List accounts: GET request to " . self::DOWNLOAD_URL);
@@ -332,6 +479,9 @@ class CreditMutuelService implements BankServiceInterface
         ];
     }
 
+    /**
+     * @internal
+     */
     private function convertCsvToTransactions(string $csv): array
     {
         $lineSeparator = "\n";

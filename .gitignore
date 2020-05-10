@@ -2,8 +2,11 @@
 vendor/
 public/tests/
 assets/
+docs/
+target/
 locale/*.res
 src/secret.php
 *.iml
 .phpunit.result.cache
 composer.phar
+phpDocumentor.phar

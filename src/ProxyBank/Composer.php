@@ -4,8 +4,25 @@
 namespace ProxyBank;
 
 
+use GuzzleHttp\Client;
+
 class Composer
 {
+    public static function installPhpDocumentor()
+    {
+        $phpDocumentorPhar = __DIR__ . "/../../phpDocumentor.phar";
+        $phpDocumentorPharUrl = "http://www.phpdoc.org/phpDocumentor.phar";
+
+        if (!file_exists($phpDocumentorPhar)) {
+            print "Download phpDocumentor.phar...";
+            require __DIR__ . "/../../vendor/autoload.php";
+            $client = new Client();
+            $response = $client->get($phpDocumentorPharUrl);
+            $pharLocalFile = fopen($phpDocumentorPhar, "w");
+            fwrite($pharLocalFile, $response->getBody());
+            fclose($pharLocalFile);
+        }
+    }
 
     public static function copySwaggerUIAssets()
     {

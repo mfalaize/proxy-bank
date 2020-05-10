@@ -35,9 +35,29 @@
     }
   },
   "scripts": {
+    "generate-locales": [
+      "genrb --verbose --destdir locale/ --encoding utf-8 locale/*.txt"
+    ],
+    "generate-phpdoc": [
+      "ProxyBank\\Composer::installPhpDocumentor",
+      "php phpDocumentor.phar"
+    ],
     "test": [
       "@composer install",
+      "@generate-locales",
+      "@generate-phpdoc",
       "vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --coverage-text"
+    ],
+    "serve": [
+      "@composer install",
+      "@generate-locales",
+      "@generate-phpdoc",
+      "php -S localhost:8080 public/index.php"
+    ],
+    "release": [
+      "@composer install --no-dev --optimize-autoloader",
+      "@generate-locales",
+      "@generate-phpdoc"
     ],
     "post-install-cmd": [
       "ProxyBank\\Composer::copySwaggerUIAssets"
@@ -47,6 +67,10 @@
     ]
   },
   "scripts-descriptions": {
-    "test": "Run all tests!"
+    "generate-locales": "Generates locale files from locale directory",
+    "generate-phpdoc": "Generates phpDocumentor files in docs directory",
+    "test": "Run all tests!",
+    "serve": "Run the application in a development server",
+    "release": "Build a release build that is ready to upload to your server"
   }
 }

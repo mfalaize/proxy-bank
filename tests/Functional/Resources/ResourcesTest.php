@@ -1,12 +1,12 @@
 <?php
 
 
-namespace Tests\Functional\Assets;
+namespace Tests\Functional\Resources;
 
 
 use Tests\FunctionalTestCase;
 
-class AssetsTest extends FunctionalTestCase
+class ResourcesTest extends FunctionalTestCase
 {
     /**
      * @test

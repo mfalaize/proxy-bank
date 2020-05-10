@@ -1,6 +1,6 @@
 <?php
 
-use ProxyBank\Services\Banks\CreditMutuelService;
+use ProxyBank\Services\Banks\France\CreditMutuelService;
 use function DI\autowire;
 
 return [

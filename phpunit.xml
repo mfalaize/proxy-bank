@@ -20,6 +20,9 @@
                 <file>src/middlewares.php</file>
                 <file>src/routes.php</file>
                 <file>src/secret.php</file>
+                <file>src/banks.php</file>
+                <file>src/config.dev.php</file>
+                <file>src/config.prod.php</file>
                 <file>src/ProxyBank/Composer.php</file>
             </exclude>
         </whitelist>

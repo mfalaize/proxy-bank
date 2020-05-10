@@ -1,8 +1,8 @@
 <?php
 
-use ProxyBank\Controllers\AssetsController;
 use ProxyBank\Controllers\BankController;
 use ProxyBank\Controllers\OpenApiController;
+use ProxyBank\Controllers\ResourcesController;
 use Slim\Routing\RouteCollectorProxy;
 
 $app->group("/bank", function (RouteCollectorProxy $group) {
@@ -21,4 +21,4 @@ $app->group("/bank", function (RouteCollectorProxy $group) {
 $app->get("/", OpenApiController::class . ":swaggerUi");
 $app->get("/swagger.json", OpenApiController::class . ":swaggerJson");
 
-$app->get("/assets/{path:.*}.{type}", AssetsController::class . ":getResource");
+$app->get("/{root:assets|docs}/{path:.*}.{type}", ResourcesController::class . ":getResource");
