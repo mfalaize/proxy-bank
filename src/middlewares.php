@@ -2,6 +2,7 @@
 
 use ProxyBank\Exceptions\ProxyBankException;
 use ProxyBank\Exceptions\ProxyBankExceptionsHandler;
+use ProxyBank\Exceptions\ProxyBankJsonRenderer;
 use ProxyBank\Middlewares\IntlMiddleware;
 use ProxyBank\Services\IntlService;
 use Psr\Log\LoggerInterface;
@@ -17,3 +18,4 @@ $proxyBankExceptionsHandler = new ProxyBankExceptionsHandler(
     $app->getContainer()->get(LoggerInterface::class)
 );
 $errorMiddleware->setErrorHandler(ProxyBankException::class, $proxyBankExceptionsHandler, true);
+$errorMiddleware->getDefaultErrorHandler()->registerErrorRenderer("application/json", ProxyBankJsonRenderer::class);

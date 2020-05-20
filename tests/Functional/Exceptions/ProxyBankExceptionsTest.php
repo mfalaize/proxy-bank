@@ -134,4 +134,22 @@ class ProxyBankExceptionsTest extends FunctionalTestCase
         $this->assertEquals(401, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString('{"message":"Invalid or expired authentication for bank Cr\u00e9dit Mutuel"}', (string)$response->getBody());
     }
+
+    /**
+     * @test
+     */
+    public function Errors_should_return_500_with_custom_message()
+    {
+        $this->bankService->expects($this->atLeastOnce())
+            ->method("listAvailableBanks")
+            ->willReturnCallback(function () {
+                $var = null;
+                return $var->whatever();
+            });
+
+        $response = $this->app->handle($this->request);
+
+        $this->assertEquals(500, $response->getStatusCode());
+        $this->assertJsonStringEqualsJsonString('{"message":"An unexpected error has occurred. Please contact the website administrator."}', (string)$response->getBody());
+    }
 }
