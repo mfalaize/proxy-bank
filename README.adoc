@@ -1,4 +1,4 @@
-= ProxyBank
+= ProxyBank API
 :numbered:
 
 image:https://img.shields.io/badge/php-%3E%3D%207.2-8892BF.svg[link="https://gitlab.com/mfalaize/proxy-bank/-/commits/master",title="pipeline status"]
@@ -26,13 +26,6 @@ You can use simple php web hosting if all of these requirements are met.
 
 == Installation
 
-=== Development
-
-. `composer serve`
-. Go to link:http://localhost:8080[]
-
-=== Production
-
 . Either download the latest release available at link:https://gitlab.com/mfalaize/proxy-bank/-/releases[] or build the release yourself via the command `composer release`
 . Unzip the release and upload the complete proxy-bank directory to your server
 . Configure your http server to serve the link:public[] directory.
@@ -43,3 +36,7 @@ The Apache configuration file is already provided (link:public/.htaccess[]) but 
 == Available banks
 
 You can access the available bank list link:https://api.maxime-falaize.fr/docs/namespaces/ProxyBank.Services.Banks.html[here]
+
+== API Documentation
+
+You can access the API documentation link:https://api.maxime-falaize.fr[here]

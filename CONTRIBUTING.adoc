@@ -1,0 +1,33 @@
+= Contributing
+
+Contributions will be gladely appreciate.
+Especially to add banks that are not yet available in the API.
+
+== Gitlab issues
+
+This project uses the Gitlab issues system to track bugs and enhancements.
+
+Please report in this system any bug, feature or improvements (including additional bank request) you want to share or discuss.
+
+== Adding a bank to the API
+
+Before working on a new bank integration, please check that it is not already in progress in the Gitlab issues system.
+If it is not, please create a feature request to share your intent.
+
+To add a new bank to the API, you need to:
+
+. Create a new implementation of link:src/ProxyBank/Services/BankServiceInterface.php[BankServiceInterface] in the link:src/ProxyBank/Services/Banks[] directory.
+. Add the new implementation in the link:src/banks.php[bank.php] file.
+
+Please take care of the php documentation so that the link:https://api.maxime-falaize.fr/docs/namespaces/ProxyBank.Services.Banks.html[bank list] can display properly.
+
+Note that contributions without corresponding unit tests will be rejected.
+
+== Run the server in development mode
+
+. `composer serve`
+. Go to link:http://localhost:8080[]
+
+== How the API works
+
+
