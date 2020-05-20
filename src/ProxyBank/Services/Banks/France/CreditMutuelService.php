@@ -454,7 +454,7 @@ class CreditMutuelService implements BankServiceInterface
         $html = new DOMDocument();
         $html->loadHTML($response->getBody(), LIBXML_NOWARNING | LIBXML_NOERROR);
 
-        $downloadCsvUrl = $html->getElementById('P:F')->getAttribute('action');
+        $downloadCsvUrl = $html->getElementById('P1:F')->getAttribute('action');
 
         $accountNodes = $html->getElementById('account-table')->getElementsByTagName('label');
         $accountCheckboxName = null;

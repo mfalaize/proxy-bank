@@ -130,7 +130,7 @@ var otpInMobileAppParameters = {
 <html>
 <head><meta charset=\"UTF-8\"/></head>
 <body>
-<form id=\"P:F\" action=\"/fr/banque/compte/telechargement.cgi?withParameters=true\">
+<form id=\"P1:F\" action=\"/fr/banque/compte/telechargement.cgi?withParameters=true\">
 <table id=\"account-table\">
 <tbody>
 <tr><td><input id=\"F_0.accountCheckbox:DataEntry\" name=\"CB:data_accounts_account_ischecked\" type=\"checkbox\"/></td><td><label for=\"F_0.accountCheckbox:DataEntry\">36025 000123456 01 COMPTE CHEQUE EUROCOMPTE M T TEST</label></td></tr>
