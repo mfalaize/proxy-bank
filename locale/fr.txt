@@ -8,6 +8,6 @@ fr {
         EmptyParsedBodyException { "Votre requête est vide ou aucun Content-Type n'a été donné" }
         RequiredValueException { "Le champ {0} est obligatoire" }
         UnknownAccountIdException { "Le numéro de compte {0} n'existe pas" }
-        DSP2TokenExpiredOrInvalidException { "Authentification invalide ou expirée pour la banque {0}" }
+        ExpiredAuthenticationException { "Authentification expirée pour la banque {0}" }
     }
 }

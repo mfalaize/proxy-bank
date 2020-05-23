@@ -5,8 +5,8 @@ namespace Tests\Functional\Exceptions;
 
 
 use ProxyBank\Exceptions\AuthenticationException;
-use ProxyBank\Exceptions\DSP2TokenExpiredOrInvalidException;
 use ProxyBank\Exceptions\EmptyParsedBodyException;
+use ProxyBank\Exceptions\ExpiredAuthenticationException;
 use ProxyBank\Exceptions\InvalidTokenException;
 use ProxyBank\Exceptions\RequiredValueException;
 use ProxyBank\Exceptions\UnknownAccountIdException;
@@ -123,16 +123,16 @@ class ProxyBankExceptionsTest extends FunctionalTestCase
     /**
      * @test
      */
-    public function DSP2TokenExpiredOrInvalidException_should_return_401()
+    public function expiredAuthenticationException_should_return_401()
     {
         $this->bankService->expects($this->atLeastOnce())
             ->method("listAvailableBanks")
-            ->willThrowException(new DSP2TokenExpiredOrInvalidException("Crédit Mutuel"));
+            ->willThrowException(new ExpiredAuthenticationException("Crédit Mutuel"));
 
         $response = $this->app->handle($this->request);
 
         $this->assertEquals(401, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString('{"message":"Invalid or expired authentication for bank Cr\u00e9dit Mutuel"}', (string)$response->getBody());
+        $this->assertJsonStringEqualsJsonString('{"message":"Expired authentication for bank Cr\u00e9dit Mutuel"}', (string)$response->getBody());
     }
 
     /**

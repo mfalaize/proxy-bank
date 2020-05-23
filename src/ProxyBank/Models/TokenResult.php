@@ -19,9 +19,9 @@ class TokenResult implements JsonSerializable
 
     /**
      * @OA\Property()
-     * @var boolean True if the encrypted token contains enough data to authenticate against bank server. False if it is incomplete (i.e. need a second factor authentication)
+     * @var boolean True if the encrypted token does not contain enough data to authenticate against bank server (i.e. need a second factor authentication). False if it is complete.
      */
-    public $completedToken;
+    public $partialToken;
 
     /**
      * @OA\Property()
@@ -35,7 +35,7 @@ class TokenResult implements JsonSerializable
 
         if (isset($this->token)) {
             $json["token"] = $this->token;
-            $json["completedToken"] = $this->completedToken;
+            $json["partialToken"] = $this->partialToken;
         }
 
         if (isset($this->message)) {

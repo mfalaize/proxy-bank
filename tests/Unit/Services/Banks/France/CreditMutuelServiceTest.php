@@ -11,7 +11,7 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use ProxyBank\Exceptions\AuthenticationException;
-use ProxyBank\Exceptions\DSP2TokenExpiredOrInvalidException;
+use ProxyBank\Exceptions\ExpiredAuthenticationException;
 use ProxyBank\Exceptions\RequiredValueException;
 use ProxyBank\Exceptions\UnknownAccountIdException;
 use ProxyBank\Models\Account;
@@ -452,7 +452,7 @@ var otpInMobileAppParameters = {
         $token = $this->scenario_get_auth_token_with_login_success();
 
         $this->assertEquals("encryptedToken", $token->token);
-        $this->assertFalse($token->completedToken);
+        $this->assertTrue($token->partialToken);
         $this->assertEquals("Votre connexion nécessite une sécurisation. Démarrez votre application mobile Crédit Mutuel depuis votre appareil \"MOTO G (5S) DE M MAXIME FALAIZE\" pour vérifier et confirmer votre identité.", $token->message);
     }
 
@@ -492,7 +492,7 @@ var otpInMobileAppParameters = {
         $token = $this->scenario_get_auth_token_with_otp_transaction_pending();
 
         $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
+        $this->assertNull($token->partialToken);
         $this->assertEquals("En attente de votre validation...", $token->message);
     }
 
@@ -504,7 +504,7 @@ var otpInMobileAppParameters = {
         $token = $this->scenario_get_auth_token_with_otp_transaction_cancelled();
 
         $this->assertNull($token->token);
-        $this->assertNull($token->completedToken);
+        $this->assertNull($token->partialToken);
         $this->assertEquals("La transaction a été annulée", $token->message);
     }
 
@@ -531,7 +531,7 @@ var otpInMobileAppParameters = {
         $token = $this->scenario_get_auth_token_with_otp_transaction_validated();
 
         $this->assertEquals("aCompleteEncryptedToken", $token->token);
-        $this->assertTrue($token->completedToken);
+        $this->assertFalse($token->partialToken);
         $this->assertNull($token->message);
     }
 
@@ -551,12 +551,12 @@ var otpInMobileAppParameters = {
     /**
      * @test
      */
-    public function listAccounts_should_throw_DSP2TokenExpiredOrInvalidException_if_dsp2_token_is_invalid_or_expired()
+    public function listAccounts_should_throw_ExpiredAuthenticationException_if_dsp2_token_is_invalid_or_expired()
     {
         try {
             $this->scenario_list_accounts_with_login_success_and_dsp2_token_expired_or_invalid();
-            $this->fail("DSP2TokenExpiredOrInvalidException is expected");
-        } catch (DSP2TokenExpiredOrInvalidException $e) {
+            $this->fail("ExpiredAuthenticationException is expected");
+        } catch (ExpiredAuthenticationException $e) {
             $this->assertEquals(["Crédit Mutuel"], $e->messageFormatterArgs);
         }
     }
@@ -604,12 +604,12 @@ var otpInMobileAppParameters = {
     /**
      * @test
      */
-    public function fetchTransactions_should_throw_DSP2TokenExpiredOrInvalidException_if_dsp2_token_is_invalid_or_expired()
+    public function fetchTransactions_should_throw_ExpiredAuthenticationException_if_dsp2_token_is_invalid_or_expired()
     {
         try {
             $this->scenario_fetch_transactions_with_login_success_and_dsp2_token_expired_or_invalid();
-            $this->fail("DSP2TokenExpiredOrInvalidException is expected");
-        } catch (DSP2TokenExpiredOrInvalidException $e) {
+            $this->fail("ExpiredAuthenticationException is expected");
+        } catch (ExpiredAuthenticationException $e) {
             $this->assertEquals(["Crédit Mutuel"], $e->messageFormatterArgs);
         }
     }

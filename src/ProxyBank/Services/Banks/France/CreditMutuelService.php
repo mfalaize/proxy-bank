@@ -11,7 +11,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\SetCookie;
 use GuzzleHttp\HandlerStack;
 use ProxyBank\Exceptions\AuthenticationException;
-use ProxyBank\Exceptions\DSP2TokenExpiredOrInvalidException;
+use ProxyBank\Exceptions\ExpiredAuthenticationException;
 use ProxyBank\Exceptions\RequiredValueException;
 use ProxyBank\Exceptions\UnknownAccountIdException;
 use ProxyBank\Models\Account;
@@ -166,7 +166,7 @@ class CreditMutuelService implements BankServiceInterface
      *
      * First call with Login and Password as authentication inputs. We log in against the website authentication page.
      * Then Crédit Mutuel needs your smartphone validation (in the Crédit Mutuel application) so we return immediately
-     * a {@link TokenResult} with a {@link TokenResult::$token}, {@link TokenResult::$completedToken} to false and a
+     * a {@link TokenResult} with a {@link TokenResult::$token}, {@link TokenResult::$partialToken} to `true` and a
      * {@link TokenResult::$message} to indicates that we need your validation.
      *
      * ### Second step
@@ -178,7 +178,7 @@ class CreditMutuelService implements BankServiceInterface
      *
      * @param array $inputs
      * @return TokenResult
-     * @throws DSP2TokenExpiredOrInvalidException
+     * @throws ExpiredAuthenticationException
      * @throws RequiredValueException
      */
     public function getAuthToken(array $inputs): TokenResult
@@ -228,7 +228,7 @@ class CreditMutuelService implements BankServiceInterface
         if ($response->getStatusCode() != 302) {
             $this->processLoginFailed($response);
         } else if ($hasDSP2Token && $response->getHeaderLine("Location") == self::BASE_URL . self::VALIDATION_URL) {
-            throw new DSP2TokenExpiredOrInvalidException(self::getBank()->name);
+            throw new ExpiredAuthenticationException(self::getBank()->name);
         }
 
         $this->logger->debug("Authentication success");
@@ -284,7 +284,7 @@ class CreditMutuelService implements BankServiceInterface
             ]);
 
             $token->token = $this->cryptoService->encrypt($tokenJson);
-            $token->completedToken = true;
+            $token->partialToken = false;
         }
         return $token;
     }
@@ -327,10 +327,10 @@ class CreditMutuelService implements BankServiceInterface
 
         $token = new TokenResult();
         $token->token = $this->cryptoService->encrypt($tokenJson);
-        $token->completedToken = false;
+        $token->partialToken = true;
         $token->message = $message;
 
-        $this->logger->debug("Validation: Generate incomplete token which needs additional auth factor");
+        $this->logger->debug("Validation: Generate partial token which needs additional auth factor");
 
         return $token;
     }
@@ -377,7 +377,7 @@ class CreditMutuelService implements BankServiceInterface
      *
      * @param array $inputs
      * @return array
-     * @throws DSP2TokenExpiredOrInvalidException
+     * @throws ExpiredAuthenticationException
      */
     public function listAccounts(array $inputs): array
     {
@@ -404,7 +404,7 @@ class CreditMutuelService implements BankServiceInterface
      * @param string $accountId
      * @param array $inputs
      * @return array
-     * @throws DSP2TokenExpiredOrInvalidException
+     * @throws ExpiredAuthenticationException
      * @throws UnknownAccountIdException
      */
     public function fetchTransactions(string $accountId, array $inputs): array

@@ -64,7 +64,7 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
             ->willReturnCallback(function () {
                 $token = new TokenResult();
                 $token->token = "anotherEncryptedToken";
-                $token->completedToken = true;
+                $token->partialToken = false;
                 $token->message = "OK";
                 return $token;
             });
@@ -76,7 +76,7 @@ class GetAuthTokenServiceTest extends FunctionalTestCase
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertEquals('application/json', $response->getHeaderLine("Content-Type"));
-        $this->assertEquals('{"token":"anotherEncryptedToken","completedToken":true,"message":"OK"}', (string)$response->getBody());
+        $this->assertEquals('{"token":"anotherEncryptedToken","partialToken":false,"message":"OK"}', (string)$response->getBody());
     }
 
     /**

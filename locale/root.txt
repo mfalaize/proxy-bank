@@ -10,6 +10,6 @@ root {
         RequiredValueException { "{0} value is required" }
         AuthenticationException { "{0}" }
         UnknownAccountIdException { "Unknown {0} accountId" }
-        DSP2TokenExpiredOrInvalidException { "Invalid or expired authentication for bank {0}" }
+        ExpiredAuthenticationException { "Expired authentication for bank {0}" }
     }
 }

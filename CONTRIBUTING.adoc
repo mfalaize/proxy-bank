@@ -17,9 +17,10 @@ If it is not, please create a feature request to share your intent.
 To add a new bank to the API, you need to:
 
 . Create a new implementation of link:src/ProxyBank/Services/BankServiceInterface.php[BankServiceInterface] in the link:src/ProxyBank/Services/Banks[] directory.
+The specification can be found link:https://api.maxime-falaize.fr/docs/classes/ProxyBank.Services.BankServiceInterface.html[here] or in the link:src/ProxyBank/Services/BankServiceInterface.php[BankServiceInterface] php doc.
 . Add the new implementation in the link:src/banks.php[bank.php] file.
 
-Please take care of the php documentation so that the link:https://api.maxime-falaize.fr/docs/namespaces/ProxyBank.Services.Banks.html[bank list] can display properly.
+Please take care of the php documentation so that the link:https://api.maxime-falaize.fr/docs/namespaces/ProxyBank.Services.Banks.html[bank list] can be displayed properly.
 
 Note that contributions without corresponding unit tests will be rejected.
 
@@ -27,7 +28,3 @@ Note that contributions without corresponding unit tests will be rejected.
 
 . `composer serve`
 . Go to link:http://localhost:8080[]
-
-== How the API works
-
-
