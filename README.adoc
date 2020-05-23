@@ -40,3 +40,14 @@ You can access the available bank list link:https://api.maxime-falaize.fr/docs/n
 == API Documentation
 
 You can access the API documentation link:https://api.maxime-falaize.fr[here]
+
+Basically you need to call the `/bank/list` webservice first to list all available banks and retrieve your `bankId`.
+
+Then you can generate the ProxyBank auth token with the `/bank/{bankId}/token` webservice.
+Here is one of the possible process:
+
+image::uml/GetAuthenticationTokenWebService-DoubleFactorAuthProcess.png[]
+
+With the final token, you can then call the other API endpoints. E.g:
+
+image::uml/ListAccountsWebService.png[]
