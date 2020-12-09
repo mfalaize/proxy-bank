@@ -46,8 +46,50 @@ Basically you need to call the `/bank/list` webservice first to list all availab
 Then you can generate the ProxyBank auth token with the `/bank/{bankId}/token` webservice.
 Here is one of the possible process:
 
-image::uml/GetAuthenticationTokenWebService-DoubleFactorAuthProcess.png[]
+[plantuml]
+----
+@startuml
+title Get Authentication Token WebService - Double Factor Auth Process
+
+actor You as you
+participant "ProxyBank API" as api
+participant "Real Bank" as bank
+
+you -> api: POST /bank/{bankId}/token\nContent-Type: application/json\nAccept: application/json\nBody: Auth inputs
+api -> bank: Log in with auth inputs
+bank --> api: Auth OK but double factor auth is required
+api -> api: Take all auth inputs and encrypt them\nwith private server secret (AES 256)
+api --> you: Send encrypted token, partialToken: true\nand message to tell why the encrypted token is not complete
+you -> you: Validate or get double factor authentication
+you -> api: POST /bank/{bankId}/token\nContent-Type: application/json\nAccept: application/json\nBody: partial token and additional auth informations if needed
+api -> api: Decrypt token to retrieve auth informations
+api -> bank: Send auth informations + double factor auth or\ncheck validation status
+bank --> api: Auth OK: Set DSP2 cookie
+api -> api: Take all auth inputs + DSP2 cookie and encrypt\nthem with private server secret (AES 256)
+api --> you: Send encrypted token, partielToken: false
+you -> you: Store final token because server does not store it
+@enduml
+----
 
 With the final token, you can then call the other API endpoints. E.g:
 
-image::uml/ListAccountsWebService.png[]
+[plantuml]
+----
+@startuml
+title List accounts WebService
+
+actor You as you
+participant "ProxyBank API" as api
+participant "Real Bank" as bank
+
+you -> api: POST /bank/{bankId}/account/list\nContent-Type: application/json\nAccept: application/json\nBody: accountId + token
+api -> api: Decrypt token to retrieve auth informations
+api -> bank: Log in with decrypted auth informations
+bank --> api: Auth OK
+api -> bank: List accounts
+bank --> api: Accounts list
+api -> api: Process bank format accounts list to apply\nProxyBank format
+api --> you: ProxyBank formatted accounts list
+
+@enduml
+----
