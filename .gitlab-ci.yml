@@ -26,6 +26,7 @@ test:
   script:
     # Install xdebug (for phpunit coverage)
     - pecl install xdebug && docker-php-ext-enable xdebug
+    - export XDEBUG_MODE=coverage
     - php composer.phar test
 
 deploy:
